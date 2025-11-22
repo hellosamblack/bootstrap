@@ -244,6 +244,7 @@ else {
                 "focus": false,
                 "panel": "dedicated"
             },
+            "runOptions": { "runOn": "folderOpen" },
             "problemMatcher": [],
             "windows": {
                 "command": "pwsh",
@@ -302,6 +303,7 @@ else {
                 "focus": false,
                 "panel": "dedicated"
             },
+            "runOptions": { "runOn": "folderOpen" },
             "problemMatcher": []
         }
         ,
@@ -429,7 +431,8 @@ else {
                 try {
                     Copy-Item -Path $templateBase -Destination $requirementsPath -Force
                     Write-ScaffoldInfo 'Seeded requirements.txt from requirements.base.txt template.'
-                } catch { Write-ScaffoldError "Could not seed requirements.txt: $_" }
+                }
+                catch { Write-ScaffoldError "Could not seed requirements.txt: $_" }
             }
         }
         if ((Test-Path $venvPython) -and (-not (Test-Path $bootstrapSentinel))) {
