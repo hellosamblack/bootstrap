@@ -422,10 +422,9 @@ finally { Pop-Location }
     $startContent = @'
 <#
 .SYNOPSIS
-        Start Astro docs dev server with optional browser launch.
-        Safe when invoked from any directory.
+    Start Astro docs dev server (blocking) with optional deferred browser open.
 .PARAMETER NoBrowser
-        Skip auto-opening the browser.
+    Skip auto-opening the browser.
 #>
 param([switch]$NoBrowser)
 Set-StrictMode -Version Latest
@@ -434,36 +433,25 @@ $uname=''; try { $uname=(uname) 2>$null } catch {}
 $IsWindowsPlatform=($env:OS -eq 'Windows_NT')
 $IsLinuxPlatform=(-not $IsWindowsPlatform -and (Test-Path '/etc/os-release'))
 $IsMacOSPlatform=(-not $IsWindowsPlatform -and -not $IsLinuxPlatform -and $uname -eq 'Darwin')
-function Open-DocsBrowser {
-    param([string]$Url)
-    try {
-        if ($IsWindowsPlatform) { Start-Process $Url; return }
-        if ($IsMacOSPlatform) { & open $Url; return }
-        if ($IsLinuxPlatform) { & xdg-open $Url; return }
-        Write-Host "Unknown platform; open $Url manually" -ForegroundColor Yellow
-    }
-    catch { Write-Host "Could not open browser automatically; navigate to $Url" -ForegroundColor Yellow }
-}
 Push-Location $PSScriptRoot
 try {
-    if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) {
-        Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow
-        exit 1
-    }
-    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-        Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red
-        exit 1
-    }
-    if (-not (Test-Path 'node_modules')) { & "$PSScriptRoot/setup_docs.ps1" }
-    Write-Host 'Starting Astro docs dev server...' -ForegroundColor Cyan
-    $npm = (Get-Command npm).Source
-    if (-not $npm) { Write-Host 'npm executable not resolved.' -ForegroundColor Red; exit 1 }
-    $proc = Start-Process -FilePath $npm -ArgumentList 'run','dev' -PassThru
-    Start-Sleep -Seconds 4
-    $url = 'http://localhost:4321/'
-    if (-not $NoBrowser) { Open-DocsBrowser -Url $url }
-    Write-Host "Docs server started. PID: $($proc.Id). URL: $url" -ForegroundColor Green
-    Wait-Process -Id $proc.Id
+  if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) {
+    Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow
+    exit 1
+  }
+  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red
+    exit 1
+  }
+  if (-not (Test-Path 'node_modules')) { & "$PSScriptRoot/setup_docs.ps1" }
+  $npm = (Get-Command npm).Source
+  $url = 'http://localhost:4321'
+  Write-Host 'Starting Astro docs dev server (blocking)...' -ForegroundColor Cyan
+  if (-not $NoBrowser) {
+    Start-Job -ScriptBlock { Start-Sleep -Seconds 4; try { Start-Process 'http://localhost:4321' } catch {} } | Out-Null
+  }
+  & $npm 'run' 'dev'
+  Write-Host 'Docs dev process exited.' -ForegroundColor Yellow
 }
 finally { Pop-Location }
 '@
