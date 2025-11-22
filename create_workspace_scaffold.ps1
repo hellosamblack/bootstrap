@@ -488,54 +488,69 @@ finally { Pop-Location }
 else { Write-ScaffoldInfo 'Skipping documentation site feature.' }
 
 # ---------------------------------------------------------------------------
-# 6. spec-kit repository clone & copilot CLI launch
+# 6. spec-kit repository clone (robust) & copilot CLI (manual)
 # ---------------------------------------------------------------------------
 if ($selectedFeatures -contains 'speckit') {
+    $forceGit = ($env:BOOTSTRAP_CLONE_MODE -eq 'git')
+    $sshKeyDir = Join-Path $HOME '.ssh'
+    $hasSshKeys = $false
+    if (Test-Path $sshKeyDir) {
+        $hasSshKeys = (Get-ChildItem -Path $sshKeyDir -Filter 'id_*' -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'id_(ed25519|rsa)$' }) -ne $null
+    }
+    $preferGit = $forceGit -or (-not $hasSshKeys)
+
     if (-not (Test-Path $repoDir)) {
-        if (Get-Command gh -ErrorAction SilentlyContinue) {
-            Write-ScaffoldInfo 'Cloning spec-kit repository (gh)'
-            $ghProto = ''
-            try { $ghProto = (& gh config get git_protocol) 2>$null } catch {}
-            if ($ghProto -eq 'ssh') {
-                Write-ScaffoldInfo 'gh protocol is ssh; switching to https to avoid public key issues.'
-                try { & gh config set git_protocol https } catch { Write-ScaffoldError "Failed to set gh protocol to https: $_" }
+        # Attempt gh clone only if not preferring git directly and gh exists
+        if (-not $preferGit -and (Get-Command gh -ErrorAction SilentlyContinue)) {
+            $proto = ''
+            try { $proto = (& gh config get git_protocol) 2>$null } catch {}
+            if ($proto -eq 'ssh') {
+                Write-ScaffoldInfo 'gh protocol ssh -> switching to https.'
+                try { & gh config set git_protocol https } catch { Write-ScaffoldError "Failed to set gh protocol: $_" }
+                $proto = ''; try { $proto = (& gh config get git_protocol) 2>$null } catch {}
             }
-            & gh repo clone github/spec-kit $repoDir
-            if ($LASTEXITCODE -ne 0) {
-                Write-ScaffoldError 'gh clone failed; attempting git HTTPS clone.'
-                if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
-                if (Get-Command git -ErrorAction SilentlyContinue) {
-                    & git clone https://github.com/github/spec-kit.git $repoDir
-                    if ($LASTEXITCODE -ne 0) {
-                        Write-ScaffoldError 'git HTTPS clone failed; attempting zip archive fallback.'
-                        if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
-                        $zipUrl = 'https://codeload.github.com/github/spec-kit/zip/refs/heads/main'
-                        $zipPath = Join-Path $env:TEMP 'spec-kit.zip'
-                        try {
-                            Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
-                            $extractRoot = Join-Path $env:TEMP 'spec-kit_extract'
-                            if (Test-Path $extractRoot) { Remove-Item -Path $extractRoot -Recurse -Force }
-                            New-Item -ItemType Directory -Path $extractRoot | Out-Null
-                            Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
-                            $extractedDir = Join-Path $extractRoot 'spec-kit-main'
-                            if (Test-Path $extractedDir) {
-                                Move-Item -Path $extractedDir -Destination $repoDir -Force
-                                Write-ScaffoldInfo 'spec-kit obtained via zip fallback.'
-                            }
-                            else { Write-ScaffoldError 'Zip extraction did not produce spec-kit-main directory.' }
-                            Remove-Item -Path $zipPath -Force
-                        }
-                        catch { Write-ScaffoldError "Zip fallback failed: $_" }
-                    }
+            if ($proto -ne 'https') {
+                Write-ScaffoldInfo 'gh still using ssh/unknown; falling back to git HTTPS.'
+                $preferGit = $true
+            }
+            if (-not $preferGit) {
+                Write-ScaffoldInfo 'Cloning spec-kit via gh (https).'
+                & gh repo clone github/spec-kit $repoDir
+                if ($LASTEXITCODE -ne 0) {
+                    Write-ScaffoldError 'gh clone failed; switching to git HTTPS.'
+                    $preferGit = $true
+                    if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
                 }
             }
         }
-        elseif (Get-Command git -ErrorAction SilentlyContinue) {
-            Write-ScaffoldInfo 'Cloning spec-kit repository (git)'
-            & git clone https://github.com/github/spec-kit.git $repoDir
-            if ($LASTEXITCODE -ne 0) {
-                Write-ScaffoldError 'git HTTPS clone failed; attempting zip archive fallback.'
-                if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
+        if ($preferGit) {
+            if (Get-Command git -ErrorAction SilentlyContinue) {
+                Write-ScaffoldInfo 'Cloning spec-kit via git HTTPS.'
+                & git clone https://github.com/github/spec-kit.git $repoDir
+                if ($LASTEXITCODE -ne 0) {
+                    Write-ScaffoldError 'git HTTPS clone failed; initiating zip fallback.'
+                    if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
+                    $zipUrl = 'https://codeload.github.com/github/spec-kit/zip/refs/heads/main'
+                    $zipPath = Join-Path $env:TEMP 'spec-kit.zip'
+                    try {
+                        Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+                        $extractRoot = Join-Path $env:TEMP 'spec-kit_extract'
+                        if (Test-Path $extractRoot) { Remove-Item -Path $extractRoot -Recurse -Force }
+                        New-Item -ItemType Directory -Path $extractRoot | Out-Null
+                        Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
+                        $extractedDir = Join-Path $extractRoot 'spec-kit-main'
+                        if (Test-Path $extractedDir) {
+                            Move-Item -Path $extractedDir -Destination $repoDir -Force
+                            Write-ScaffoldInfo 'spec-kit obtained via zip fallback.'
+                        }
+                        else { Write-ScaffoldError 'Zip extraction did not produce spec-kit-main directory.' }
+                        Remove-Item -Path $zipPath -Force
+                    }
+                    catch { Write-ScaffoldError "Zip fallback failed: $_" }
+                }
+            }
+            else {
+                Write-ScaffoldInfo 'git not found; initiating zip fallback.'
                 $zipUrl = 'https://codeload.github.com/github/spec-kit/zip/refs/heads/main'
                 $zipPath = Join-Path $env:TEMP 'spec-kit.zip'
                 try {
@@ -555,17 +570,14 @@ if ($selectedFeatures -contains 'speckit') {
                 catch { Write-ScaffoldError "Zip fallback failed: $_" }
             }
         }
-        else { Write-ScaffoldInfo 'Neither gh nor git CLI found; skipping spec-kit clone' }
     }
     else { Write-ScaffoldInfo 'spec-kit repository already present; skipping clone.' }
 }
 else { Write-ScaffoldInfo 'Skipping spec-kit clone feature.' }
 
+# Copilot auto-launch disabled (manual invocation recommended)
 if ($selectedFeatures -contains 'copilot') {
-    if ((Test-Path $repoDir) -and (Get-Command copilot -ErrorAction SilentlyContinue)) {
-        try { Write-ScaffoldInfo 'Launching copilot CLI in spec-kit'; Push-Location $repoDir; & copilot; Pop-Location } catch { Write-ScaffoldError "copilot CLI launch failed: $_" }
-    }
-    else { Write-ScaffoldInfo 'Copilot feature selected but prerequisites (spec-kit repo & copilot CLI) not met.' }
+    Write-ScaffoldInfo 'Copilot feature selected; auto-launch disabled. Run manually: cd spec-kit; copilot'
 }
 else { Write-ScaffoldInfo 'Skipping copilot CLI feature.' }
 
