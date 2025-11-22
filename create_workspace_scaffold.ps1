@@ -178,7 +178,7 @@ New-DirectoryIfMissing $dirVscode
 New-DirectoryIfMissing (Join-Path $workspaceRoot '.venv')
 Write-ScaffoldInfo "Bootstrapping workspace at '$workspaceRoot' with features: $($selectedFeatures -join ', ')"
 if ($selectedFeatures -contains 'vscode') {
-        $tasksContent = @'
+    $tasksContent = @'
 {
     "version": "2.0.0",
     "tasks": [
@@ -468,12 +468,67 @@ else { Write-ScaffoldInfo 'Skipping documentation site feature.' }
 if ($selectedFeatures -contains 'speckit') {
     if (-not (Test-Path $repoDir)) {
         if (Get-Command gh -ErrorAction SilentlyContinue) {
-            Write-ScaffoldInfo 'Cloning spec-kit repository'
-            try { & gh repo clone github/spec-kit $repoDir } catch { Write-ScaffoldError "Failed to clone spec-kit: $_" }
+            Write-ScaffoldInfo 'Cloning spec-kit repository (gh)'
+            $ghProto = ''
+            try { $ghProto = (& gh config get git_protocol) 2>$null } catch {}
+            if ($ghProto -eq 'ssh') {
+                Write-ScaffoldInfo 'gh protocol is ssh; switching to https to avoid public key issues.'
+                try { & gh config set git_protocol https } catch { Write-ScaffoldError "Failed to set gh protocol to https: $_" }
+            }
+            & gh repo clone github/spec-kit $repoDir
+            if ($LASTEXITCODE -ne 0) {
+                Write-ScaffoldError 'gh clone failed; attempting git HTTPS clone.'
+                if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
+                if (Get-Command git -ErrorAction SilentlyContinue) {
+                    & git clone https://github.com/github/spec-kit.git $repoDir
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-ScaffoldError 'git HTTPS clone failed; attempting zip archive fallback.'
+                        if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
+                        $zipUrl = 'https://codeload.github.com/github/spec-kit/zip/refs/heads/main'
+                        $zipPath = Join-Path $env:TEMP 'spec-kit.zip'
+                        try {
+                            Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+                            $extractRoot = Join-Path $env:TEMP 'spec-kit_extract'
+                            if (Test-Path $extractRoot) { Remove-Item -Path $extractRoot -Recurse -Force }
+                            New-Item -ItemType Directory -Path $extractRoot | Out-Null
+                            Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
+                            $extractedDir = Join-Path $extractRoot 'spec-kit-main'
+                            if (Test-Path $extractedDir) {
+                                Move-Item -Path $extractedDir -Destination $repoDir -Force
+                                Write-ScaffoldInfo 'spec-kit obtained via zip fallback.'
+                            }
+                            else { Write-ScaffoldError 'Zip extraction did not produce spec-kit-main directory.' }
+                            Remove-Item -Path $zipPath -Force
+                        }
+                        catch { Write-ScaffoldError "Zip fallback failed: $_" }
+                    }
+                }
+            }
         }
         elseif (Get-Command git -ErrorAction SilentlyContinue) {
-            Write-ScaffoldInfo 'Cloning spec-kit repository (via git)'
-            try { & git clone https://github.com/github/spec-kit.git $repoDir } catch { Write-ScaffoldError "Failed to clone spec-kit: $_" }
+            Write-ScaffoldInfo 'Cloning spec-kit repository (git)'
+            & git clone https://github.com/github/spec-kit.git $repoDir
+            if ($LASTEXITCODE -ne 0) {
+                Write-ScaffoldError 'git HTTPS clone failed; attempting zip archive fallback.'
+                if (Test-Path $repoDir) { try { Remove-Item -Path $repoDir -Recurse -Force } catch {} }
+                $zipUrl = 'https://codeload.github.com/github/spec-kit/zip/refs/heads/main'
+                $zipPath = Join-Path $env:TEMP 'spec-kit.zip'
+                try {
+                    Invoke-WebRequest -UseBasicParsing -Uri $zipUrl -OutFile $zipPath
+                    $extractRoot = Join-Path $env:TEMP 'spec-kit_extract'
+                    if (Test-Path $extractRoot) { Remove-Item -Path $extractRoot -Recurse -Force }
+                    New-Item -ItemType Directory -Path $extractRoot | Out-Null
+                    Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
+                    $extractedDir = Join-Path $extractRoot 'spec-kit-main'
+                    if (Test-Path $extractedDir) {
+                        Move-Item -Path $extractedDir -Destination $repoDir -Force
+                        Write-ScaffoldInfo 'spec-kit obtained via zip fallback.'
+                    }
+                    else { Write-ScaffoldError 'Zip extraction did not produce spec-kit-main directory.' }
+                    Remove-Item -Path $zipPath -Force
+                }
+                catch { Write-ScaffoldError "Zip fallback failed: $_" }
+            }
         }
         else { Write-ScaffoldInfo 'Neither gh nor git CLI found; skipping spec-kit clone' }
     }
