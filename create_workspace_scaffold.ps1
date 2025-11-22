@@ -141,19 +141,20 @@ if (-not (Test-Path $settingsFile)) {
     Write-ScaffoldInfo 'Creating settings.json with absolute interpreter path'
     if ($IsWindows) {
         $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv\Scripts\python.exe'
-    } else {
+    }
+    else {
         $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv/bin/python'
     }
     
     $settingsObject = @{
-        'python.defaultInterpreterPath' = $interpreterAbsolute
+        'python.defaultInterpreterPath'                = $interpreterAbsolute
         'python.terminal.activateEnvInCurrentTerminal' = $true
-        'python.terminal.useEnvFile' = $true
-        'python.linting.enabled' = $true
-        'python.linting.flake8Enabled' = $true
-        'python.linting.flake8Args' = @('--max-line-length=120')
-        'python.testing.pytestEnabled' = $true
-        'python.testing.unittestEnabled' = $false
+        'python.terminal.useEnvFile'                   = $true
+        'python.linting.enabled'                       = $true
+        'python.linting.flake8Enabled'                 = $true
+        'python.linting.flake8Args'                    = @('--max-line-length=120')
+        'python.testing.pytestEnabled'                 = $true
+        'python.testing.unittestEnabled'               = $false
     }
     $settingsContent = $settingsObject | ConvertTo-Json -Depth 4
     Set-Content -Path $settingsFile -Value $settingsContent -Encoding UTF8
@@ -164,112 +165,27 @@ if (-not (Test-Path $settingsFile)) {
 # ---------------------------------------------------------------------------
 $aiDir = Join-Path $workspaceRoot '.ai'
 Ensure-Dir $aiDir
-$commonFile = Join-Path $aiDir 'common-ai-instructions.md'
-$geminiFile = Join-Path $aiDir 'gemini.instructions.md'
-$copilotFile = Join-Path $aiDir 'copilot.instructions.md'
 
-$commonContent = @'
-# Common AI Instructions
+# Download AI instruction templates from bootstrap repo
+$templateBaseUrl = 'https://raw.githubusercontent.com/hellosamblack/bootstrap/main/templates/ai-instructions'
+$aiTemplates = @{
+    'common-ai-instructions.md' = Join-Path $aiDir 'common-ai-instructions.md'
+    'gemini.instructions.md'    = Join-Path $aiDir 'gemini.instructions.md'
+    'copilot.instructions.md'   = Join-Path $aiDir 'copilot.instructions.md'
+}
 
-## Development Standards
-
-### Python Environment
-- **Virtual Environment**: Always use workspace `.venv` for Python tooling
-- **Interpreter**: Absolute path configured in workspace settings
-- **Global Installs**: Disabled to ensure isolation
-
-### Code Style & Quality
-- **Max Line Length**: 120 characters
-- **Linter**: flake8 only (no Black formatter by default)
-- **Tests**: pytest only (unittest disabled)
-- **Type Hints**: Encouraged where beneficial
-
-### Dependencies
-- **Latest Versions**: Install unpinned packages at latest stable versions
-- **PyTorch**: Always install `torch` + `torchvision` together via CU130 index:
-  ```bash
-  pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
-  ```
-
-### Security
-- **Secrets Management**: Use environment variables via 1Password CLI
-- **No Hardcoded Credentials**: All sensitive data via `${env:VAR_NAME}`
-- **SSH Keys**: Use privateKeyPath with env vars for passwords
-
-### Communication Style
-- **Concise**: Provide direct answers unless verbosity requested
-- **Actionable**: Focus on practical implementation
-- **Context-Aware**: Reference workspace structure and existing patterns
-
-## AI Toolkit Commands
-
-When working with AI/Agent development, leverage these tools:
-
-- `aitk-get_agent_code_gen_best_practices` - Best practices for AI agent development
-- `aitk-get_tracing_code_gen_best_practices` - Tracing implementation guidance
-- `aitk-get_ai_model_guidance` - AI model selection and usage
-- `aitk-evaluation_planner` - Evaluation metrics clarification (multi-turn)
-- `aitk-get_evaluation_code_gen_best_practices` - Evaluation code generation
-- `aitk-evaluation_agent_runner_best_practices` - Agent runner best practices
-
-## Repository Standards
-
-### Workspace Bootstrap
-- This workspace was initialized via [bootstrap](https://github.com/hellosamblack/bootstrap)
-- Scaffold script creates consistent structure across machines
-- Settings Sync propagates user-level tasks automatically
-
-### Default Actions
-- **spec-kit**: Automatically cloned to workspace root
-- **copilot CLI**: Launched in spec-kit directory if available
-- **Dev Packages**: pytest, flake8 installed automatically on first bootstrap
-'@
-
-$geminiContent = @'
-# Gemini Instructions
-
-Refer to [Common AI Instructions](./common-ai-instructions.md) for base standards.
-
-## Model-Specific Notes
-
-**Model**: Google Gemini (latest)
-
-### Strengths & Usage
-- **Structured Output**: Emphasize JSON formatting when requested
-- **Code Generation**: Leverage strong context window for large codebases
-- **Security**: Maintain strict adherence to security & lint rules
-- **Multimodal**: Can process images/diagrams when provided
-
-### Response Style
-- Prioritize clarity and structure
-- Use markdown formatting extensively
-- Provide code examples in fenced blocks with language tags
-'@
-
-$copilotContent = @'
-# Copilot Instructions
-
-Refer to [Common AI Instructions](./common-ai-instructions.md) for base standards.
-
-## Model-Specific Notes
-
-**Model**: GitHub Copilot (GPT-based)
-
-### Strengths & Usage
-- **Repository Context**: Leverage deep understanding of repo structure
-- **Coding Standards**: Follow repository coding patterns automatically
-- **Security Practices**: Enforce secure coding practices
-- **Incremental Development**: Excel at iterative refinement
-
-### Response Style
-- Brief, actionable responses by default
-- Code-first approach when appropriate
-- Contextual awareness of recent changes
-'@
-
-Ensure-File $commonFile  $commonContent
-Ensure-File $geminiFile  $geminiContent
-Ensure-File $copilotFile $copilotContent
+foreach ($template in $aiTemplates.Keys) {
+    $localPath = $aiTemplates[$template]
+    if (-not (Test-Path $localPath)) {
+        try {
+            Write-ScaffoldInfo "Downloading AI instruction template: $template"
+            Invoke-WebRequest -UseBasicParsing -Uri "$templateBaseUrl/$template" -OutFile $localPath
+        }
+        catch {
+            Write-ScaffoldError "Could not download $template (will use defaults): $_"
+        }
+    }
+}
 
 # ---------------------------------------------------------------------------
 # 3b. GitHub Agents directory (.github/agents/)
@@ -290,8 +206,8 @@ Write-ScaffoldInfo "Detected project type: $projectType"
 # Download agent templates from bootstrap repo
 $agentBaseUrl = 'https://raw.githubusercontent.com/hellosamblack/bootstrap/main/.github/agents'
 $agentFiles = @{
-    'ignition' = 'ignition-agent.md'
-    'llm' = 'llm-agent.md'
+    'ignition'      = 'ignition-agent.md'
+    'llm'           = 'llm-agent.md'
     'homeassistant' = 'homeassistant-agent.md'
 }
 
@@ -301,7 +217,8 @@ if ($agentFiles.ContainsKey($projectType)) {
         try {
             Write-ScaffoldInfo "Downloading $($agentFiles[$projectType]) agent template"
             Invoke-WebRequest -UseBasicParsing -Uri "$agentBaseUrl/$($agentFiles[$projectType])" -OutFile $agentFile
-        } catch {
+        }
+        catch {
             Write-ScaffoldInfo "Could not download agent template (will be available after repo sync): $_"
         }
     }
@@ -312,7 +229,8 @@ if ($agentFiles.ContainsKey($projectType)) {
 # ---------------------------------------------------------------------------
 if ($IsWindows) { 
     $venvPython = Join-Path $workspaceRoot '.venv\Scripts\python.exe' 
-} else { 
+}
+else { 
     $venvPython = Join-Path $workspaceRoot '.venv/bin/python' 
 }
 $bootstrapSentinel = Join-Path $workspaceRoot '.venv\.bootstrap_done'

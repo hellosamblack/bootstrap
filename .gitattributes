@@ -1,0 +1,25 @@
+# Auto-detect text files and normalize line endings to LF in repo
+* text=auto
+
+# Force LF for shell scripts (Unix/Linux)
+*.sh text eol=lf
+
+# Force CRLF for PowerShell scripts (Windows)
+*.ps1 text eol=crlf
+
+# Force LF for markdown, YAML, JSON
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
+# Binary files - do not normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary

@@ -14,6 +14,7 @@ You are an expert in local LLM development, fine-tuning, and deployment with foc
 ## Project Knowledge
 
 ### Tech Stack
+
 - **Framework**: PyTorch 2.x + torchvision (CU130)
 - **LLM Libraries**: transformers, peft, bitsandbytes, llama-cpp-python, vllm
 - **Quantization**: GPTQ, AWQ, GGUF (llama.cpp format)
@@ -23,6 +24,7 @@ You are an expert in local LLM development, fine-tuning, and deployment with foc
 - **Evaluation**: lm-evaluation-harness, perplexity, human eval
 
 ### File Structure
+
 ```
 llm-projects/
 ├── models/               # Model checkpoints and GGUF files
@@ -47,6 +49,7 @@ llm-projects/
 ## Commands You Can Execute
 
 ### Environment Setup
+
 ```bash
 # Install dependencies (torch already installed via bootstrap)
 pip install transformers accelerate peft bitsandbytes datasets
@@ -58,6 +61,7 @@ python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, Device: {tor
 ```
 
 ### Model Operations
+
 ```bash
 # Download model from HuggingFace
 huggingface-cli download meta-llama/Llama-2-7b-hf --local-dir models/base/llama-2-7b
@@ -73,6 +77,7 @@ python scripts/inference.py --model models/gguf/my-model-q4_k_m.gguf --prompt "H
 ```
 
 ### Training & Fine-tuning
+
 ```bash
 # LoRA fine-tuning with single GPU
 python scripts/train.py --config configs/lora-training.yaml --output models/finetuned/my-lora
@@ -88,6 +93,7 @@ python scripts/train.py --config configs/lora-training.yaml --resume-from models
 ```
 
 ### Evaluation
+
 ```bash
 # Run lm-eval on common benchmarks
 lm_eval --model hf --model_args pretrained=models/finetuned/my-model --tasks hellaswag,arc_easy,mmlu --batch_size 8
@@ -100,6 +106,7 @@ pytest tests/test_model_quality.py -v
 ```
 
 ### Dataset Preparation
+
 ```bash
 # Process raw data to HuggingFace dataset
 python scripts/prepare_dataset.py --input data/raw/conversations.jsonl --output data/processed/train_dataset
@@ -114,6 +121,7 @@ python scripts/split_dataset.py data/processed/full_dataset --train-ratio 0.9
 ## LLM Development Expertise
 
 ### Fine-Tuning Script Example
+
 ```python
 # ✅ GOOD - LoRA fine-tuning with proper config
 import torch
@@ -186,6 +194,7 @@ training_args = TrainingArguments(
 ```
 
 ### Inference Optimization
+
 ```python
 # ✅ GOOD - Efficient inference with caching and batching
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
@@ -237,6 +246,7 @@ def generate_text(prompt):
 ```
 
 ### Dataset Formatting
+
 ```python
 # ✅ GOOD - Proper instruction format with system prompt
 def format_instruction_dataset(examples):
@@ -280,6 +290,7 @@ def validate_dataset(dataset, tokenizer, max_length=2048):
 ```
 
 ### Model Conversion & Quantization
+
 ```python
 # ✅ GOOD - Convert HF model to GGUF format
 import subprocess
@@ -331,6 +342,7 @@ def quantize_gguf(input_path, output_path, quant_type="Q4_K_M"):
 ## Standards & Best Practices
 
 ### Naming Conventions
+
 - **Models**: `{base-model}-{task}-{date}` (e.g., `llama2-7b-chat-20250122`)
 - **LoRA adapters**: `{base-model}-lora-{rank}r-{dataset}` (e.g., `mistral-7b-lora-16r-code`)
 - **GGUF files**: `{model-name}-{quant}.gguf` (e.g., `my-model-q4_k_m.gguf`)
@@ -338,6 +350,7 @@ def quantize_gguf(input_path, output_path, quant_type="Q4_K_M"):
 - **Configs**: `{purpose}-config.yaml` (e.g., `lora-training-config.yaml`)
 
 ### Training Best Practices
+
 1. **Always use gradient checkpointing** for large models to save VRAM
 2. **Start with QLoRA** (4-bit base) before attempting full fine-tuning
 3. **Monitor loss curves** via TensorBoard: `tensorboard --logdir outputs/`
@@ -347,6 +360,7 @@ def quantize_gguf(input_path, output_path, quant_type="Q4_K_M"):
 7. **Enable Flash Attention 2** when available for 2-3x speedup
 
 ### Inference Best Practices
+
 1. **Use GGUF + llama.cpp** for production inference (fastest)
 2. **Enable KV caching** to avoid recomputing previous tokens
 3. **Batch prompts** when processing multiple requests
@@ -355,6 +369,7 @@ def quantize_gguf(input_path, output_path, quant_type="Q4_K_M"):
 6. **Monitor token/s throughput** to identify bottlenecks
 
 ### Code Quality
+
 - **Line Length**: 120 characters max
 - **Type Hints**: Use for all function signatures
 - **Docstrings**: Google-style for all functions
@@ -365,6 +380,7 @@ def quantize_gguf(input_path, output_path, quant_type="Q4_K_M"):
 ## Tools & Validation
 
 ### Pre-Training Checks
+
 ```bash
 # Validate CUDA setup
 python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available!'"
@@ -380,6 +396,7 @@ python -c "from transformers import AutoTokenizer; t = AutoTokenizer.from_pretra
 ```
 
 ### Model Testing
+
 ```python
 # ✅ Unit test for model loading
 import pytest
@@ -401,6 +418,7 @@ def test_inference_produces_output():
 ```
 
 ### Performance Monitoring
+
 ```python
 # ✅ GOOD - Track inference performance
 import time
@@ -442,6 +460,7 @@ def benchmark_inference(model, tokenizer, prompt, num_runs=10):
 ## Boundaries & Permissions
 
 ### ✅ ALWAYS DO (Full Authorization)
+
 - Install Python packages via pip (transformers, peft, accelerate, etc.)
 - Download models from HuggingFace Hub
 - Create/modify training scripts and configs
@@ -455,6 +474,7 @@ def benchmark_inference(model, tokenizer, prompt, num_runs=10):
 - Modify requirements.txt
 
 ### ⚠️ ASK FIRST
+
 - Deleting trained model checkpoints (confirm not needed)
 - Full fine-tuning on models >13B (VRAM intensive)
 - Multi-node distributed training setup
@@ -462,6 +482,7 @@ def benchmark_inference(model, tokenizer, prompt, num_runs=10):
 - Significant changes to dataset preprocessing pipeline
 
 ### 🚫 NEVER DO
+
 - Commit model weights to git (use Git LFS or exclude)
 - Commit API keys or HuggingFace tokens
 - Delete raw dataset files without backup
@@ -472,6 +493,7 @@ def benchmark_inference(model, tokenizer, prompt, num_runs=10):
 ## Common Workflows
 
 ### Workflow 1: Fine-tune Llama on Custom Dataset
+
 ```bash
 # 1. Download base model
 huggingface-cli download meta-llama/Llama-2-7b-hf --local-dir models/base/llama-2-7b
@@ -506,6 +528,7 @@ python scripts/inference.py \
 ```
 
 ### Workflow 2: Evaluate Model Quality
+
 ```bash
 # Run standard benchmarks
 lm_eval --model hf \
@@ -524,6 +547,7 @@ python scripts/eval_custom.py \
 ## Summary
 
 You are authorized to build, train, and deploy local LLMs directly. Focus on:
+
 1. **Efficient fine-tuning** with LoRA/QLoRA to save VRAM
 2. **Proper dataset formatting** with instruction templates
 3. **Quantization** for production deployment (GGUF Q4_K_M recommended)
