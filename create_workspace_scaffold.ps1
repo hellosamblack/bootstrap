@@ -178,53 +178,48 @@ New-DirectoryIfMissing $dirVscode
 New-DirectoryIfMissing (Join-Path $workspaceRoot '.venv')
 Write-ScaffoldInfo "Bootstrapping workspace at '$workspaceRoot' with features: $($selectedFeatures -join ', ')"
 if ($selectedFeatures -contains 'vscode') {
-    $tasksContent = @'
+        $tasksContent = @'
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Bootstrap Workspace (Skip)",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy","Bypass",
-        "-File","bootstrap_repo/create_workspace_scaffold.ps1",
-        "-Skip"
-      ],
-      "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
-      "problemMatcher": []
-    },
-    {
-      "label": "Lint",
-      "type": "shell",
-      "command": "pwsh",
-      "args": ["-NoProfile","-Command","if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python -m flake8 . } elseif (Test-Path .venv/bin/python) { ./.venv/bin/python -m flake8 . } else { echo 'Venv missing'; exit 1 }"] ,
-      "presentation": { "echo": true, "reveal": "never" },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test",
-      "type": "shell",
-      "command": "pwsh",
-      "args": ["-NoProfile","-Command","if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python -m pytest -q } elseif (Test-Path .venv/bin/python) { ./.venv/bin/python -m pytest -q } else { echo 'Venv missing'; exit 1 }"] ,
-      "presentation": { "echo": true, "reveal": "never" },
-      "problemMatcher": []
-    },
-    {
-      "label": "Format",
-      "type": "shell",
-      "command": "pwsh",
-      "args": ["-NoProfile","-Command","if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python -m black . } elseif (Test-Path .venv/bin/python) { ./.venv/bin/python -m black . } else { echo 'Venv missing'; exit 1 }"] ,
-      "presentation": { "echo": true, "reveal": "never" },
-      "problemMatcher": []
-    },
-    {
-      "label": "Validate",
-      "dependsOn": ["Lint","Test"],
-      "dependsOrder": "sequence"
-    }
-  ]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Bootstrap Workspace (Skip)",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-File","bootstrap_repo/create_workspace_scaffold.ps1",
+                "-Skip"
+            ],
+            "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Dev Cycle",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "if (Test-Path .venv\\Scripts\\python.exe) { $py = '.venv\\Scripts\\python.exe' } elseif (Test-Path .venv/bin/python) { $py = './.venv/bin/python' } else { echo 'Venv missing'; exit 1 }; Write-Host 'Running flake8...' -ForegroundColor Cyan; & $py -m flake8 .; if ($LASTEXITCODE -ne 0) { Write-Host 'Lint failures' -ForegroundColor Red }; Write-Host 'Running pytest...' -ForegroundColor Cyan; & $py -m pytest -q; if ($LASTEXITCODE -ne 0) { Write-Host 'Tests failed' -ForegroundColor Red }; Write-Host 'Formatting with black...' -ForegroundColor Cyan; & $py -m black .; Write-Host 'Dev Cycle complete.' -ForegroundColor Green"
+            ],
+            "presentation": { "echo": true, "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Docs: Start",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-File","docs/start_docs.ps1"
+            ],
+            "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
+        }
+    ]
 }
 '@
     Set-Content -Path $tasksFile -Value $tasksContent -Encoding UTF8
