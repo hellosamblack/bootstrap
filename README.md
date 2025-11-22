@@ -109,6 +109,14 @@ your-workspace/
 ├── .github/
 │   └── agents/             # GitHub Copilot agents (project-specific)
 │       └── [agent].md      # Auto-detected based on project type
+├── docs/                   # Astro Starlight documentation site
+│   ├── src/content/docs/
+│   │   ├── tutorials/      # Learning-oriented lessons
+│   │   ├── guides/         # Task-oriented how-tos
+│   │   ├── reference/      # Information-oriented specs
+│   │   └── explanation/    # Understanding-oriented discussions
+│   ├── astro.config.mjs
+│   └── package.json
 ├── spec-kit/               # Cloned github/spec-kit repository
 └── requirements.txt        # (if exists) Installed with torch handling
 ```
@@ -264,7 +272,35 @@ curl -fsSL https://raw.githubusercontent.com/hellosamblack/bootstrap/main/create
 
 Script automatically detects platform and adjusts paths/commands.
 
-## 🐛 Troubleshooting
+## � Documentation
+
+### Diátaxis Framework
+
+All project documentation follows the [Diátaxis framework](https://diataxis.fr/) for clear, effective technical writing:
+
+- **Tutorials** (`docs/src/content/docs/tutorials/`) - Step-by-step learning lessons
+- **How-To Guides** (`docs/src/content/docs/guides/`) - Problem-solving recipes
+- **Reference** (`docs/src/content/docs/reference/`) - Technical specifications and API docs
+- **Explanation** (`docs/src/content/docs/explanation/`) - Background and design decisions
+
+### Astro Starlight
+
+Documentation is built with [Astro Starlight](https://starlight.astro.build/), a modern documentation framework.
+
+**Working with docs:**
+```bash
+cd docs/
+npm install          # First time only
+npm run dev          # Start dev server (http://localhost:4321)
+npm run build        # Build static site to dist/
+```
+
+**Adding new pages:**
+1. Create markdown file in appropriate Diátaxis category
+2. Add frontmatter with title and description
+3. Update sidebar in `astro.config.mjs` if needed
+
+## �🐛 Troubleshooting
 
 ### Script Doesn't Run on Folder Open
 

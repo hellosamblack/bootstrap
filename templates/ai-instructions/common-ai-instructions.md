@@ -60,3 +60,53 @@ When working with AI/Agent development, leverage these tools:
 - **spec-kit**: Automatically cloned to workspace root
 - **copilot CLI**: Launched in spec-kit directory if available
 - **Dev Packages**: pytest, flake8 installed automatically on first bootstrap
+- **docs/**: Astro Starlight documentation site using Diátaxis framework
+
+## Documentation Standards
+
+### Diátaxis Framework
+
+All project documentation follows the [Diátaxis framework](https://diataxis.fr/) with four distinct content types:
+
+- **Tutorials**: Learning-oriented lessons for beginners
+  - Location: `docs/src/content/docs/tutorials/`
+  - Purpose: Help users learn by doing
+  - Format: Step-by-step instructions with expected outcomes
+
+- **How-To Guides**: Task-oriented practical steps
+  - Location: `docs/src/content/docs/guides/`
+  - Purpose: Solve specific problems
+  - Format: Goal-focused recipes and examples
+
+- **Reference**: Information-oriented technical descriptions
+  - Location: `docs/src/content/docs/reference/`
+  - Purpose: Describe the machinery
+  - Format: API docs, configuration options, specifications
+
+- **Explanation**: Understanding-oriented discussions
+  - Location: `docs/src/content/docs/explanation/`
+  - Purpose: Clarify and illuminate topics
+  - Format: Background, context, design decisions
+
+### Astro Starlight
+
+- **Framework**: [Astro Starlight](https://starlight.astro.build/) - Documentation site generator
+- **Structure**: Markdown files in `docs/src/content/docs/`
+- **Configuration**: `docs/astro.config.mjs` and `docs/src/starlight.config.ts`
+- **Development**: `npm run dev` in docs/ directory
+- **Build**: `npm run build` creates static site in `docs/dist/`
+
+### Documentation Creation
+
+When creating documentation:
+1. **Identify content type** - Tutorial, Guide, Reference, or Explanation
+2. **Place in correct directory** - Follow Diátaxis structure
+3. **Use Starlight frontmatter**:
+   ```markdown
+   ---
+   title: Page Title
+   description: Brief description for SEO
+   ---
+   ```
+4. **Include navigation** - Update sidebar in `astro.config.mjs` if needed
+5. **Test locally** - Run dev server before committing

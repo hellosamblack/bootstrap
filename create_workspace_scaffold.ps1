@@ -285,7 +285,38 @@ if ((Test-Path $venvPython) -and (-not (Test-Path $bootstrapSentinel))) {
 }
 
 # ---------------------------------------------------------------------------
-# 5. spec-kit repository clone & copilot CLI launch
+# 5. Astro Starlight documentation site
+# ---------------------------------------------------------------------------
+$docsDir = Join-Path $workspaceRoot 'docs'
+if (-not (Test-Path $docsDir)) {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        Write-ScaffoldInfo 'Creating Astro Starlight documentation site'
+        try {
+            Push-Location $workspaceRoot
+            & npm create astro@latest docs -- --template starlight --install --no-git --typescript strict
+            
+            # Create Diátaxis directory structure
+            $contentDir = Join-Path $docsDir 'src\content\docs'
+            Ensure-Dir (Join-Path $contentDir 'tutorials')
+            Ensure-Dir (Join-Path $contentDir 'guides')
+            Ensure-Dir (Join-Path $contentDir 'reference')
+            Ensure-Dir (Join-Path $contentDir 'explanation')
+            
+            Write-ScaffoldInfo 'Documentation site created with Diátaxis structure'
+            Pop-Location
+        }
+        catch {
+            Write-ScaffoldError "Failed to create documentation site: $_"
+            Pop-Location
+        }
+    }
+    else {
+        Write-ScaffoldInfo 'npm not found; skipping documentation site creation'
+    }
+}
+
+# ---------------------------------------------------------------------------
+# 6. spec-kit repository clone & copilot CLI launch
 # ---------------------------------------------------------------------------
 $repoDir = Join-Path $workspaceRoot 'spec-kit'
 if (-not (Test-Path $repoDir)) {

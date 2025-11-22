@@ -244,7 +244,32 @@ if [ -x "$venv_python" ] && [ ! -f "$bootstrap_sentinel" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. spec-kit repository clone & copilot CLI launch
+# 5. Astro Starlight documentation site
+# ---------------------------------------------------------------------------
+docs_dir="$workspace_root/docs"
+if [ ! -d "$docs_dir" ]; then
+    if command -v npm >/dev/null 2>&1; then
+        scaffold_info "Creating Astro Starlight documentation site"
+        (
+            cd "$workspace_root" || exit 1
+            npm create astro@latest docs -- --template starlight --install --no-git --typescript strict || scaffold_error "Failed to create documentation site"
+            
+            # Create Diátaxis directory structure
+            content_dir="$docs_dir/src/content/docs"
+            mkdir -p "$content_dir/tutorials"
+            mkdir -p "$content_dir/guides"
+            mkdir -p "$content_dir/reference"
+            mkdir -p "$content_dir/explanation"
+            
+            scaffold_info "Documentation site created with Diátaxis structure"
+        )
+    else
+        scaffold_info "npm not found; skipping documentation site creation"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 6. spec-kit repository clone & copilot CLI launch
 # ---------------------------------------------------------------------------
 repo_dir="$workspace_root/spec-kit"
 if [ ! -d "$repo_dir" ]; then
