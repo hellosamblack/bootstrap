@@ -41,15 +41,15 @@ $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------------------
 # Cross-platform compatibility (PowerShell 5.x & 7.x)
 # ---------------------------------------------------------------------------
-if (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue)) { 
-    $IsWindows = ($env:OS -eq 'Windows_NT') 
+if (-not (Get-Variable -Name IsWindowsPlatform -ErrorAction SilentlyContinue)) { 
+    $IsWindowsPlatform = ($env:OS -eq 'Windows_NT') 
 }
-if (-not (Get-Variable -Name IsLinux -ErrorAction SilentlyContinue)) { 
-    $IsLinux = (-not $IsWindows) -and (Test-Path '/etc/os-release') 
+if (-not (Get-Variable -Name IsLinuxPlatform -ErrorAction SilentlyContinue)) { 
+    $IsLinuxPlatform = (-not $IsWindowsPlatform) -and (Test-Path '/etc/os-release') 
 }
 try { $uname = (uname) 2>$null } catch { $uname = '' }
-if (-not (Get-Variable -Name IsMacOS -ErrorAction SilentlyContinue)) { 
-    $IsMacOS = (-not $IsWindows) -and (-not $IsLinux) -and ($uname -eq 'Darwin') 
+if (-not (Get-Variable -Name IsMacOSPlatform -ErrorAction SilentlyContinue)) { 
+    $IsMacOSPlatform = (-not $IsWindowsPlatform) -and (-not $IsLinuxPlatform) -and ($uname -eq 'Darwin') 
 }
 
 # ---------------------------------------------------------------------------
@@ -65,157 +65,79 @@ function Write-ScaffoldError {
     Write-Host "[workspace-scaffold] ERROR: $Message" -ForegroundColor Red
 }
 
-function Ensure-Dir {
+function New-DirectoryIfMissing {
     param([string]$Path)
     if (-not (Test-Path $Path)) { 
         New-Item -ItemType Directory -Path $Path -Force | Out-Null 
     }
 }
 
-function Ensure-File {
+function New-FileIfMissing {
     param([string]$Path, [string]$Content)
-    if (-not (Test-Path $Path)) { 
-        if ($selectedFeatures -contains 'vscode') {
-            if ($IsWindows) {
-                $tasksContent = @'
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Create workspace venv",
-            "type": "shell",
-            "command": "pwsh",
-            "args": ["-NoProfile","-Command","if (-not (Test-Path '.venv\\Scripts\\python.exe')) { try { py -3 -m venv .venv } catch { try { python3 -m venv .venv } catch { try { python -m venv .venv } catch { echo 'Python not found; installing...'; & bootstrap_repo/install_python.ps1 } } } }"],
-            "presentation": {"echo": false, "reveal": "never", "focus": false, "panel": "dedicated"},
-            "runOptions": {"runOn": "folderOpen"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Bootstrap Workspace",
-            "type": "shell",
-            "command": "pwsh",
-            "args": ["-NoProfile","-ExecutionPolicy","Bypass","-File","bootstrap_repo/create_workspace_scaffold.ps1","-Skip"],
-            "presentation": {"echo": true, "reveal": "always", "focus": false, "panel": "dedicated"},
-            "runOptions": {"runOn": "folderOpen"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Lint",
-            "type": "shell",
-            "command": "pwsh",
-            "args": ["-NoProfile","-Command","if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python -m flake8 . } else { echo 'Venv missing'; exit 1 }"],
-            "presentation": {"echo": true, "reveal": "never"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Test",
-            "type": "shell",
-            "command": "pwsh",
-            "args": ["-NoProfile","-Command","if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python -m pytest -q } else { echo 'Venv missing'; exit 1 }"],
-            "presentation": {"echo": true, "reveal": "never"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Format",
-            "type": "shell",
-            "command": "pwsh",
-            "args": ["-NoProfile","-Command","if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python -m black . } else { echo 'Venv missing'; exit 1 }"],
-            "presentation": {"echo": true, "reveal": "never"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Validate",
-            "dependsOn": ["Lint","Test"],
-            "dependsOrder": "sequence"
-        }
-    ]
+    if (-not (Test-Path $Path)) { Set-Content -Path $Path -Value $Content -Encoding UTF8 }
 }
-'@
-            }
-            else {
-                $tasksContent = @'
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Create workspace venv",
-            "type": "shell",
-            "command": "bash",
-            "args": ["-lc","if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi"],
-            "presentation": {"echo": false, "reveal": "never", "focus": false, "panel": "dedicated"},
-            "runOptions": {"runOn": "folderOpen"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Bootstrap Workspace",
-            "type": "shell",
-            "command": "bash",
-            "args": ["-lc","pwsh -NoProfile -ExecutionPolicy Bypass -File bootstrap_repo/create_workspace_scaffold.ps1 -Skip || echo 'PowerShell required for full bootstrap'"],
-            "presentation": {"echo": true, "reveal": "always", "focus": false, "panel": "dedicated"},
-            "runOptions": {"runOn": "folderOpen"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Lint",
-            "type": "shell",
-            "command": "bash",
-            "args": ["-lc","if [ -x .venv/bin/python ]; then .venv/bin/python -m flake8 .; else echo 'Venv missing'; exit 1; fi"],
-            "presentation": {"echo": true, "reveal": "never"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Test",
-            "type": "shell",
-            "command": "bash",
-            "args": ["-lc","if [ -x .venv/bin/python ]; then .venv/bin/python -m pytest -q; else echo 'Venv missing'; exit 1; fi"],
-            "presentation": {"echo": true, "reveal": "never"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Format",
-            "type": "shell",
-            "command": "bash",
-            "args": ["-lc","if [ -x .venv/bin/python ]; then .venv/bin/python -m black .; else echo 'Venv missing'; exit 1; fi"],
-            "presentation": {"echo": true, "reveal": "never"},
-            "problemMatcher": []
-        },
-        {
-            "label": "Validate",
-            "dependsOn": ["Lint","Test"],
-            "dependsOrder": "sequence"
-        }
-    ]
-}
-'@
-            }
-            Write-Host "Select features to scaffold (comma-separated numbers or 'all'; blank=all):" -ForegroundColor Cyan
-            Write-Host '  1) VS Code config (.vscode)' 
-            Write-Host '  2) AI instruction files (.ai)' 
-            Write-Host '  3) Agent templates (.github/agents)' 
-            Write-Host '  4) Python dependencies (venv packages)' 
-            Write-Host '  5) Documentation site (Astro Starlight)' 
-            Write-Host '  6) spec-kit repository clone' 
-            Write-Host '  7) Launch copilot CLI (requires spec-kit)' 
-            Write-Host -NoNewline 'Enter selection: ' 
-            $inputSel = Read-Host
-            if (-not $inputSel -or $inputSel.Trim() -eq '' -or $inputSel.Trim().ToLower() -eq 'all') {
-                $selectedFeatures = $allFeatures
-            }
-            else {
-                $tokens = $inputSel -split '[,\s]+' | Where-Object { $_ }
-                foreach ($t in $tokens) { if ($availableMap.ContainsKey($t)) { $selectedFeatures += $availableMap[$t] } }
-                $selectedFeatures = $selectedFeatures | Select-Object -Unique
-                if (@($selectedFeatures).Count -eq 0) { $selectedFeatures = $allFeatures }
-            }
-        }
-        Ensure-Dir (Join-Path $workspaceRoot '.venv')
-        $recordObj = @{ features = $selectedFeatures; timestamp = (Get-Date).ToString('o') }
-        $recordJson = $recordObj | ConvertTo-Json -Depth 3
-        Set-Content -Path $featureRecordFile -Value $recordJson -Encoding UTF8
-        Write-ScaffoldInfo "Recorded selected features: $($selectedFeatures -join ', ')"
-    }
 
-    Write-ScaffoldInfo "Bootstrapping workspace at '$workspaceRoot' with features: $($selectedFeatures -join ', ')"
+# -----------------------------
+# Main Bootstrap Variables
+# -----------------------------
+$workspaceRoot = Get-Location
+$dirVscode    = Join-Path $workspaceRoot '.vscode'
+$tasksFile    = Join-Path $dirVscode 'tasks.json'
+$settingsFile = Join-Path $dirVscode 'settings.json'
+$aiDir        = Join-Path $workspaceRoot '.ai'
+$githubDir    = Join-Path $workspaceRoot '.github'
+$agentsDir    = Join-Path $githubDir 'agents'
+$docsDir      = Join-Path $workspaceRoot 'docs'
+$repoDir      = Join-Path $workspaceRoot 'spec-kit'
+$venvPython   = if ($IsWindowsPlatform) { Join-Path $workspaceRoot '.venv\Scripts\python.exe' } else { Join-Path $workspaceRoot '.venv/bin/python' }
+$bootstrapSentinel = Join-Path $workspaceRoot '.venv\.bootstrap_done'
+$featureRecordFile = Join-Path $workspaceRoot '.bootstrap_features.json'
+
+$allFeatures = @('vscode','ai','agents','python','docs','speckit','copilot')
+$availableMap = @{ '1'='vscode'; '2'='ai'; '3'='agents'; '4'='python'; '5'='docs'; '6'='speckit'; '7'='copilot' }
+
+# Feature selection logic
+$selectedFeatures = @()
+if ($Skip -or $env:BOOTSTRAP_AUTO -eq '1') {
+    if (Test-Path $featureRecordFile) {
+        try { $selectedFeatures = (Get-Content $featureRecordFile | ConvertFrom-Json).features } catch { $selectedFeatures = $allFeatures }
+    } else { $selectedFeatures = $allFeatures }
+    Write-ScaffoldInfo '-Skip/auto enabled -> using recorded or all features.'
+} elseif ($env:BOOTSTRAP_AUTO -eq '0') {
+    Write-ScaffoldInfo 'BOOTSTRAP_AUTO=0 -> skipping scaffold.'
+    return
+} else {
+    Write-ScaffoldInfo 'Select features to scaffold (comma-separated numbers or all; blank=all):'
+    Write-Host '  1) VS Code config (.vscode)'
+    Write-Host '  2) AI instruction files (.ai)'
+    Write-Host '  3) Agent templates (.github/agents)'
+    Write-Host '  4) Python dependencies (venv packages)'
+    Write-Host '  5) Documentation site (Astro Starlight)'
+    Write-Host '  6) spec-kit repository clone'
+    Write-Host '  7) Launch copilot CLI (requires spec-kit)'
+    Write-Host -NoNewline 'Enter selection: '
+    $inputSel = Read-Host
+    if (-not $inputSel -or $inputSel.Trim() -eq '' -or $inputSel.Trim().ToLower() -eq 'all') {
+        $selectedFeatures = $allFeatures
+    } else {
+        $tokens = $inputSel -split '[,\s]+' | Where-Object { $_ }
+        foreach ($t in $tokens) { if ($availableMap.ContainsKey($t)) { $selectedFeatures += $availableMap[$t] } }
+        $selectedFeatures = $selectedFeatures | Select-Object -Unique
+        if (@($selectedFeatures).Count -eq 0) { $selectedFeatures = $allFeatures }
+    }
+}
+
+# Record selection
+try {
+    $recordObj = @{ features = $selectedFeatures; timestamp = (Get-Date).ToString('o') }
+    $recordJson = $recordObj | ConvertTo-Json -Depth 3
+    Set-Content -Path $featureRecordFile -Value $recordJson -Encoding UTF8
+    Write-ScaffoldInfo "Recorded selected features: $($selectedFeatures -join ', ')"
+} catch { Write-ScaffoldError "Failed to record features: $_" }
+
+New-DirectoryIfMissing $dirVscode
+New-DirectoryIfMissing (Join-Path $workspaceRoot '.venv')
+Write-ScaffoldInfo "Bootstrapping workspace at '$workspaceRoot' with features: $($selectedFeatures -join ', ')"
     if ($selectedFeatures -contains 'vscode') {
         $tasksContent = @'
 {
@@ -225,10 +147,12 @@ function Ensure-File {
             "label": "Create workspace venv (Windows)",
             "type": "shell",
             "command": "pwsh",
-            "args": [
+                "args": [
                 "-NoProfile",
-                "-Command",
-                "if (-not (Test-Path '.venv\\Scripts\\python.exe')) { py -3 -m venv .venv }"
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "bootstrap_repo/create_venv.ps1"
             ],
             "presentation": {
                 "echo": false,
@@ -242,8 +166,10 @@ function Ensure-File {
                 "command": "pwsh",
                 "args": [
                     "-NoProfile",
-                    "-Command",
-                    "if (-not (Test-Path '.venv\\Scripts\\python.exe')) { py -3 -m venv .venv }"
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    "bootstrap_repo/create_venv.ps1"
                 ]
             }
         },
@@ -343,7 +269,9 @@ function Ensure-File {
         if (-not (Test-Path $tasksFile)) { Set-Content -Path $tasksFile -Value $tasksContent -Encoding UTF8 }
         if (-not (Test-Path $settingsFile)) {
             Write-ScaffoldInfo 'Creating settings.json with absolute interpreter path'
-            if ($IsWindows) { $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv\Scripts\python.exe' }
+            if ($IsWindowsPlatform) { $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv\Scripts\python.exe' }
+            elseif ($IsLinuxPlatform) { $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv/bin/python' }
+            elseif ($IsMacOSPlatform) { $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv/bin/python' }
             else { $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv/bin/python' }
             $settingsObject = @{
                 'python.defaultInterpreterPath'                = $interpreterAbsolute
@@ -365,7 +293,7 @@ function Ensure-File {
     # 3. AI instruction files (.ai directory)
     # ---------------------------------------------------------------------------
     if ($selectedFeatures -contains 'ai') {
-        Ensure-Dir $aiDir
+        New-DirectoryIfMissing $aiDir
         $templateBaseUrl = 'https://raw.githubusercontent.com/hellosamblack/bootstrap/main/templates/ai-instructions'
         $aiTemplates = @{
             'common-ai-instructions.md' = Join-Path $aiDir 'common-ai-instructions.md'
@@ -389,25 +317,25 @@ function Ensure-File {
     # 3b. GitHub Agents directory (.github/agents/)
     # ---------------------------------------------------------------------------
     if ($selectedFeatures -contains 'agents') {
-        Ensure-Dir $githubDir
-        Ensure-Dir $agentsDir
+        New-DirectoryIfMissing $githubDir
+        New-DirectoryIfMissing $agentsDir
         $projectType = 'general'
         if (Test-Path (Join-Path $workspaceRoot 'ignition')) { $projectType = 'ignition' }
         elseif ((Test-Path (Join-Path $workspaceRoot 'models')) -or (Test-Path (Join-Path $workspaceRoot 'scripts/train.py'))) { $projectType = 'llm' }
         elseif ((Test-Path (Join-Path $workspaceRoot 'homeassistant')) -or (Test-Path (Join-Path $workspaceRoot 'configuration.yaml'))) { $projectType = 'homeassistant' }
         Write-ScaffoldInfo "Detected project type: $projectType"
         $agentBaseUrl = 'https://raw.githubusercontent.com/hellosamblack/bootstrap/main/.github/agents'
-        $agentFiles = @{ 'ignition' = 'ignition-agent.md'; 'llm' = 'llm-agent.md'; 'homeassistant' = 'homeassistant-agent.md' }
-        if ($agentFiles.ContainsKey($projectType)) {
-            $agentFile = Join-Path $agentsDir $agentFiles[$projectType]
+        $agentFilesAll = @('ignition-agent.md','llm-agent.md','homeassistant-agent.md','code-organizer.md','powershell-agent.md','docs-agent.md')
+        foreach ($af in $agentFilesAll) {
+            $agentFile = Join-Path $agentsDir $af
             if (-not (Test-Path $agentFile)) {
                 try {
-                    Write-ScaffoldInfo "Downloading $($agentFiles[$projectType]) agent template"
-                    Invoke-WebRequest -UseBasicParsing -Uri "$agentBaseUrl/$($agentFiles[$projectType])" -OutFile $agentFile
-                }
-                catch { Write-ScaffoldInfo "Could not download agent template: $_" }
+                    Write-ScaffoldInfo "Downloading agent template: $af"
+                    Invoke-WebRequest -UseBasicParsing -Uri "$agentBaseUrl/$af" -OutFile $agentFile
+                } catch { Write-ScaffoldError "Failed to download agent ${af}: $_" }
             }
         }
+        Write-ScaffoldInfo "Agents available: $((Get-ChildItem $agentsDir -Filter '*.md').Name -join ', ')"
     }
     else { Write-ScaffoldInfo 'Skipping agents feature.' }
 
@@ -475,10 +403,10 @@ function Ensure-File {
                     Push-Location $workspaceRoot
                     & npm create astro@latest docs -- --template starlight --install --no-git --typescript strict
                     $contentDir = Join-Path $docsDir 'src\content\docs'
-                    Ensure-Dir (Join-Path $contentDir 'tutorials')
-                    Ensure-Dir (Join-Path $contentDir 'guides')
-                    Ensure-Dir (Join-Path $contentDir 'reference')
-                    Ensure-Dir (Join-Path $contentDir 'explanation')
+                    New-DirectoryIfMissing (Join-Path $contentDir 'tutorials')
+                    New-DirectoryIfMissing (Join-Path $contentDir 'guides')
+                    New-DirectoryIfMissing (Join-Path $contentDir 'reference')
+                    New-DirectoryIfMissing (Join-Path $contentDir 'explanation')
                     Write-ScaffoldInfo 'Documentation site created with Diátaxis structure'
                     Pop-Location
                 }
@@ -518,5 +446,3 @@ function Ensure-File {
     else { Write-ScaffoldInfo 'Skipping copilot CLI feature.' }
 
     Write-ScaffoldInfo 'Workspace scaffold complete!'
-
-}

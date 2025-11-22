@@ -27,7 +27,7 @@ if (-not $Python) {
 # Resolve python command to full invocation pieces
 $pythonParts = $Python -split '\s+'
 $pythonExe = $pythonParts[0]
-$pythonArgs = $pythonParts[1..($pythonParts.Count-1)]
+$pythonArgs = $pythonParts[1..($pythonParts.Count - 1)]
 
 $venvDir = Join-Path (Get-Location) '.venv'
 $winInterpreter = Join-Path $venvDir 'Scripts\python.exe'
@@ -48,7 +48,8 @@ try {
     if (Test-Path $winInterpreter) { Write-Info "Created venv: $winInterpreter" }
     elseif (Test-Path $unixInterpreter) { Write-Info "Created venv: $unixInterpreter" }
     else { Write-Err 'Venv creation reported success but interpreter missing.' }
-} catch {
+}
+catch {
     Write-Err "Failed to create venv: $_"
     exit 1
 }
