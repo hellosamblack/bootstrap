@@ -25,6 +25,16 @@
       - User-level tasks.json IS synced and will ensure script updates across machines
 #>
 
+param(
+    [switch]$Force,
+    [switch]$Skip
+)
+
+# Environment overrides:
+#   BOOTSTRAP_AUTO=1  -> run without prompt
+#   BOOTSTRAP_AUTO=0  -> skip without prompt
+# Use -Force or -Skip switches to override manually.
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -73,6 +83,34 @@ function Ensure-File {
 # Main Bootstrap Logic
 # ---------------------------------------------------------------------------
 $workspaceRoot = Get-Location
+## ---------------------------------------------------------------------------
+## Interactive prompt gating
+## ---------------------------------------------------------------------------
+if ($Skip) {
+    Write-ScaffoldInfo 'Skipping scaffolding (-Skip supplied).'
+    return
+}
+
+if ($Force -or $env:BOOTSTRAP_AUTO -eq '1') {
+    Write-ScaffoldInfo 'Auto-run enabled (Force or BOOTSTRAP_AUTO=1)'
+} elseif ($env:BOOTSTRAP_AUTO -eq '0') {
+    Write-ScaffoldInfo 'BOOTSTRAP_AUTO=0 -> skipping scaffolding.'
+    return
+} else {
+    $canPrompt = $Host.UI -and $Host.UI.RawUI
+    if ($canPrompt) {
+        Write-Host '[workspace-scaffold] Initialize workspace scaffolding? (y/N): ' -NoNewline
+        $resp = Read-Host
+        if ($resp -notmatch '^[Yy]$') {
+            Write-ScaffoldInfo 'User declined scaffolding.'
+            return
+        }
+    } else {
+        Write-ScaffoldInfo 'Non-interactive shell detected; skipping scaffolding (set BOOTSTRAP_AUTO=1 to auto-run).'
+        return
+    }
+}
+
 Write-ScaffoldInfo "Bootstrapping workspace at '$workspaceRoot'"
 
 # ---------------------------------------------------------------------------
