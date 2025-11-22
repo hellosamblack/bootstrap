@@ -85,7 +85,7 @@ function Ensure-File {
             "label": "Create workspace venv",
             "type": "shell",
             "command": "pwsh",
-            "args": ["-NoProfile","-Command","if (-not (Test-Path '.venv\\Scripts\\python.exe')) { py -3 -m venv .venv }"],
+            "args": ["-NoProfile","-Command","if (-not (Test-Path '.venv\\Scripts\\python.exe')) { try { py -3 -m venv .venv } catch { try { python3 -m venv .venv } catch { try { python -m venv .venv } catch { echo 'Python not found; installing...'; & bootstrap_repo/install_python.ps1 } } } }"],
             "presentation": {"echo": false, "reveal": "never", "focus": false, "panel": "dedicated"},
             "runOptions": {"runOn": "folderOpen"},
             "problemMatcher": []
@@ -205,7 +205,7 @@ function Ensure-File {
                 $tokens = $inputSel -split '[,\s]+' | Where-Object { $_ }
                 foreach ($t in $tokens) { if ($availableMap.ContainsKey($t)) { $selectedFeatures += $availableMap[$t] } }
                 $selectedFeatures = $selectedFeatures | Select-Object -Unique
-                if ($selectedFeatures.Count -eq 0) { $selectedFeatures = $allFeatures }
+                if (@($selectedFeatures).Count -eq 0) { $selectedFeatures = $allFeatures }
             }
         }
         Ensure-Dir (Join-Path $workspaceRoot '.venv')
@@ -447,7 +447,7 @@ function Ensure-File {
                         & $venvPython -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
                     }
                     $remaining = $reqLines | Where-Object { $_ -and ($_ -notmatch '^\s*torch(\b|[=<>])') -and ($_ -notmatch '^\s*torchvision(\b|[=<>])') -and ($_ -notmatch '^\s*#') -and ($_ -notmatch '^\s*$') }
-                    if ($remaining.Count -gt 0) {
+                    if (@($remaining).Count -gt 0) {
                         $tempReq = Join-Path $env:TEMP 'req_remaining.txt'
                         Set-Content -Path $tempReq -Value $remaining -Encoding UTF8
                         Write-ScaffoldInfo 'Installing remaining requirements'
