@@ -1,0 +1,16 @@
+# Base Python requirements template
+pytest
+flake8
+black
+pydantic
+requests
+# Optional type checking
+#mypy
+# Optional AI/ML (uncomment as needed)
+#torch
+#torchvision
+#transformers
+#accelerate
+# Optional data/analysis
+#pandas
+#numpy

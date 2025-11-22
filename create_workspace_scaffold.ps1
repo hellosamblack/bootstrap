@@ -219,51 +219,87 @@ else {
     Write-ScaffoldInfo "Bootstrapping workspace at '$workspaceRoot' with features: $($selectedFeatures -join ', ')"
     if ($selectedFeatures -contains 'vscode') {
             $tasksContent = @'
-    {
-        "version": "2.0.0",
-        "tasks": [
-            {
-                "label": "Create workspace venv (Windows)",
-                "type": "shell",
-                "command": "if (-not (Test-Path .venv\\Scripts\\python.exe)) { py -3 -m venv .venv }",
-                "presentation": {
-                    "echo": false,
-                    "reveal": "never",
-                    "focus": false,
-                    "panel": "dedicated"
-                },
-                "runOptions": {
-                    "runOn": "folderOpen"
-                },
-                "problemMatcher": [],
-                "windows": {
-                    "command": "if (-not (Test-Path .venv\\Scripts\\python.exe)) { py -3 -m venv .venv }"
-                }
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create workspace venv (Windows)",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "if (-not (Test-Path '.venv\\Scripts\\python.exe')) { py -3 -m venv .venv }"
+            ],
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "focus": false,
+                "panel": "dedicated"
             },
-            {
-                "label": "Create workspace venv (Linux/Mac)",
-                "type": "shell",
-                "command": "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi",
-                "presentation": {
-                    "echo": false,
-                    "reveal": "never",
-                    "focus": false,
-                    "panel": "dedicated"
-                },
-                "runOptions": {
-                    "runOn": "folderOpen"
-                },
-                "problemMatcher": [],
-                "linux": {
-                    "command": "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi"
-                },
-                "osx": {
-                    "command": "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi"
-                }
+            "problemMatcher": [],
+            "windows": {
+                "command": "pwsh",
+                "args": [
+                    "-NoProfile",
+                    "-Command",
+                    "if (-not (Test-Path '.venv\\Scripts\\python.exe')) { py -3 -m venv .venv }"
+                ]
             }
-        ]
-    }
-    '@
+        },
+        {
+            "label": "Create workspace venv (Linux/Mac)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-lc",
+                "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi"
+            ],
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "focus": false,
+                "panel": "dedicated"
+            },
+            "problemMatcher": [],
+            "linux": {
+                "command": "bash",
+                "args": [
+                    "-lc",
+                    "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi"
+                ]
+            },
+            "osx": {
+                "command": "bash",
+                "args": [
+                    "-lc",
+                    "if [ ! -x .venv/bin/python ]; then python3 -m venv .venv; fi"
+                ]
+            }
+        },
+        {
+            "label": "Bootstrap Workspace",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "bootstrap_repo/create_workspace_scaffold.ps1",
+                "-Skip"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
+'@
             if (-not (Test-Path $tasksFile)) { Set-Content -Path $tasksFile -Value $tasksContent -Encoding UTF8 }
             if (-not (Test-Path $settingsFile)) {
                     Write-ScaffoldInfo 'Creating settings.json with absolute interpreter path'
@@ -301,7 +337,7 @@ if ($selectedFeatures -contains 'ai') {
             try {
                 Write-ScaffoldInfo "Downloading AI instruction template: $template"
                 Invoke-WebRequest -UseBasicParsing -Uri "$templateBaseUrl/$template" -OutFile $localPath
-            } catch { Write-ScaffoldError "Could not download $template: $_" }
+            } catch { Write-ScaffoldError "Could not download ${template}: $_" }
         }
     }
 } else { Write-ScaffoldInfo 'Skipping AI instruction feature.' }
@@ -413,3 +449,5 @@ if ($selectedFeatures -contains 'copilot') {
 } else { Write-ScaffoldInfo 'Skipping copilot CLI feature.' }
 
 Write-ScaffoldInfo 'Workspace scaffold complete!'
+
+}
