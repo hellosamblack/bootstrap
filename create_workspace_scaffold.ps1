@@ -88,21 +88,23 @@ function Ensure-Venv {
     Write-ScaffoldInfo 'Creating virtual environment (.venv)'    
     $created = $false
     if ($IsWindowsPlatform) {
-        foreach ($cmd in @('py -3','python3','python')) {
+        foreach ($cmd in @('py -3', 'python3', 'python')) {
             try {
                 Write-ScaffoldInfo "Trying: $cmd -m venv .venv"
                 & $cmd -m venv .venv 2>$null
                 if (Test-Path $venvPython) { $created = $true; break }
-            } catch {}
+            }
+            catch {}
         }
     }
     else {
-        foreach ($cmd in @('python3','python')) {
+        foreach ($cmd in @('python3', 'python')) {
             try {
                 Write-ScaffoldInfo "Trying: $cmd -m venv .venv"
                 & $cmd -m venv .venv 2>$null
                 if (Test-Path $venvPython) { $created = $true; break }
-            } catch {}
+            }
+            catch {}
         }
     }
     if ($created) { Write-ScaffoldInfo 'Virtual environment created.' }
@@ -303,6 +305,19 @@ else { Write-ScaffoldInfo 'Skipping agents feature.' }
 # 4. Python dependency bootstrap with torch handling
 # ---------------------------------------------------------------------------
 if ($selectedFeatures -contains 'python') {
+    # Ensure virtual environment exists before dependency bootstrap
+    if (-not (Test-Path $venvPython)) {
+        Write-ScaffoldInfo 'Creating Python virtual environment (.venv)'
+        $venvDir = Join-Path $workspaceRoot '.venv'
+        $created = $false
+        try { & py -3 -m venv $venvDir; $created = $true } catch {}
+        if (-not $created) { try { & python3 -m venv $venvDir; $created = $true } catch {} }
+        if (-not $created) { try { & python -m venv $venvDir; $created = $true } catch {} }
+        if ($created) {
+            Write-ScaffoldInfo 'Virtual environment created successfully.'
+        }
+        else { Write-ScaffoldError 'Could not create virtual environment; install Python and re-run.' }
+    }
     $requirementsPath = Join-Path $workspaceRoot 'requirements.txt'
     # Ensure venv exists in this same session
     if (-not (Test-Path $venvPython)) { Ensure-Venv }
@@ -377,6 +392,70 @@ if ($selectedFeatures -contains 'docs') {
         else { Write-ScaffoldInfo 'npm not found; skipping documentation site creation' }
     }
     else { Write-ScaffoldInfo 'Documentation site already exists; skipping.' }
+
+    # Docs helper scripts (setup & start) - always ensure they exist
+    $docsSetupScript = Join-Path $docsDir 'setup_docs.ps1'
+    $docsStartScript = Join-Path $docsDir 'start_docs.ps1'
+    $setupContent = @'
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+        Install Astro/Node dependencies for the docs site.
+#>
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host "npm CLI not found. Install Node.js." -ForegroundColor Red
+    exit 1
+}
+Push-Location $PSScriptRoot
+try {
+    if (-not (Test-Path 'node_modules')) {
+        Write-Host "Installing Astro docs dependencies..." -ForegroundColor Cyan
+        & npm install
+    }
+    else {
+        Write-Host "node_modules present; skipping npm install." -ForegroundColor Yellow
+    }
+}
+finally { Pop-Location }
+'@
+    $startContent = @'
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+        Start Astro Starlight docs dev server and open browser.
+#>
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$uname=''; try { $uname=(uname) 2>$null } catch {}
+$IsWindows=($env:OS -eq 'Windows_NT')
+$IsLinux=(-not $IsWindows -and (Test-Path '/etc/os-release'))
+$IsMac=(-not $IsWindows -and -not $IsLinux -and $uname -eq 'Darwin')
+if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host "npm CLI not found. Install Node.js." -ForegroundColor Red
+    exit 1
+}
+Push-Location $PSScriptRoot
+try {
+    if (-not (Test-Path 'node_modules')) { & "$PSScriptRoot/setup_docs.ps1" }
+    Write-Host "Starting Astro docs dev server..." -ForegroundColor Cyan
+    $proc = Start-Process -FilePath (Get-Command npm).Source -ArgumentList 'run','dev' -PassThru
+    Start-Sleep -Seconds 4
+    $url = 'http://localhost:4321/'
+    try {
+        if ($IsWindows) { Start-Process $url }
+        elseif ($IsMac) { & open $url }
+        elseif ($IsLinux) { & xdg-open $url }
+    }
+    catch { Write-Host "Could not auto-open browser; navigate to $url" -ForegroundColor Yellow }
+    Write-Host "Docs server started. PID: $($proc.Id). URL: $url" -ForegroundColor Green
+}
+finally { Pop-Location }
+'@
+    if (-not (Test-Path $docsSetupScript)) { Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8 }
+    if (-not (Test-Path $docsStartScript)) { Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8 }
+    Write-ScaffoldInfo 'Docs helper scripts ensured (setup_docs.ps1, start_docs.ps1).'
 }
 else { Write-ScaffoldInfo 'Skipping documentation site feature.' }
 
