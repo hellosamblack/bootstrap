@@ -425,13 +425,14 @@ finally { Pop-Location }
 <#
 .SYNOPSIS
         Start Astro Starlight docs dev server and open browser.
+        Safe variable names (avoid readonly automatic vars).
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $uname=''; try { $uname=(uname) 2>$null } catch {}
-$IsWindows=($env:OS -eq 'Windows_NT')
-$IsLinux=(-not $IsWindows -and (Test-Path '/etc/os-release'))
-$IsMac=(-not $IsWindows -and -not $IsLinux -and $uname -eq 'Darwin')
+$IsWindowsPlatform=($env:OS -eq 'Windows_NT')
+$IsLinuxPlatform=(-not $IsWindowsPlatform -and (Test-Path '/etc/os-release'))
+$IsMacOSPlatform=(-not $IsWindowsPlatform -and -not $IsLinuxPlatform -and $uname -eq 'Darwin')
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     Write-Host "npm CLI not found. Install Node.js." -ForegroundColor Red
     exit 1
@@ -444,9 +445,9 @@ try {
     Start-Sleep -Seconds 4
     $url = 'http://localhost:4321/'
     try {
-        if ($IsWindows) { Start-Process $url }
-        elseif ($IsMac) { & open $url }
-        elseif ($IsLinux) { & xdg-open $url }
+        if ($IsWindowsPlatform) { Start-Process $url }
+        elseif ($IsMacOSPlatform) { & open $url }
+        elseif ($IsLinuxPlatform) { & xdg-open $url }
     }
     catch { Write-Host "Could not auto-open browser; navigate to $url" -ForegroundColor Yellow }
     Write-Host "Docs server started. PID: $($proc.Id). URL: $url" -ForegroundColor Green
@@ -454,7 +455,14 @@ try {
 finally { Pop-Location }
 '@
     if (-not (Test-Path $docsSetupScript)) { Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8 }
-    if (-not (Test-Path $docsStartScript)) { Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8 }
+    $needsUpdate = (Test-Path $docsStartScript) -and (Select-String -Path $docsStartScript -Pattern '\$IsWindows=' -Quiet)
+    if ($needsUpdate) {
+        Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
+        Write-ScaffoldInfo 'Updated existing start_docs.ps1 (replaced reserved variable usage).'
+    }
+    elseif (-not (Test-Path $docsStartScript)) {
+        Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
+    }
     Write-ScaffoldInfo 'Docs helper scripts ensured (setup_docs.ps1, start_docs.ps1).'
 }
 else { Write-ScaffoldInfo 'Skipping documentation site feature.' }
