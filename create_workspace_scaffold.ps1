@@ -392,68 +392,93 @@ if ($selectedFeatures -contains 'docs') {
     $docsSetupScript = Join-Path $docsDir 'setup_docs.ps1'
     $docsStartScript = Join-Path $docsDir 'start_docs.ps1'
     $setupContent = @'
-#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-        Install Astro/Node dependencies for the docs site.
+    Install Astro/Node dependencies for the docs site.
+    Safe for Windows / cross-platform (no shebang to avoid /usr/bin/env invocation issues).
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    Write-Host "npm CLI not found. Install Node.js." -ForegroundColor Red
-    exit 1
-}
 Push-Location $PSScriptRoot
 try {
-    if (-not (Test-Path 'node_modules')) {
-        Write-Host "Installing Astro docs dependencies..." -ForegroundColor Cyan
-        & npm install
-    }
-    else {
-        Write-Host "node_modules present; skipping npm install." -ForegroundColor Yellow
-    }
+  if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) {
+    Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow
+    exit 1
+  }
+  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red
+    exit 1
+  }
+  if (-not (Test-Path 'node_modules')) {
+    Write-Host 'Installing Astro docs dependencies...' -ForegroundColor Cyan
+    & npm install
+  }
+  else {
+    Write-Host 'node_modules present; skipping npm install.' -ForegroundColor Yellow
+  }
 }
 finally { Pop-Location }
 '@
     $startContent = @'
-#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-        Start Astro Starlight docs dev server and open browser.
-        Safe variable names (avoid readonly automatic vars).
+        Start Astro docs dev server with optional browser launch.
+        Safe when invoked from any directory.
+.PARAMETER NoBrowser
+        Skip auto-opening the browser.
 #>
+param([switch]$NoBrowser)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $uname=''; try { $uname=(uname) 2>$null } catch {}
 $IsWindowsPlatform=($env:OS -eq 'Windows_NT')
 $IsLinuxPlatform=(-not $IsWindowsPlatform -and (Test-Path '/etc/os-release'))
 $IsMacOSPlatform=(-not $IsWindowsPlatform -and -not $IsLinuxPlatform -and $uname -eq 'Darwin')
-if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    Write-Host "npm CLI not found. Install Node.js." -ForegroundColor Red
-    exit 1
+function Open-DocsBrowser {
+    param([string]$Url)
+    try {
+        if ($IsWindowsPlatform) { Start-Process $Url; return }
+        if ($IsMacOSPlatform) { & open $Url; return }
+        if ($IsLinuxPlatform) { & xdg-open $Url; return }
+        Write-Host "Unknown platform; open $Url manually" -ForegroundColor Yellow
+    }
+    catch { Write-Host "Could not open browser automatically; navigate to $Url" -ForegroundColor Yellow }
 }
 Push-Location $PSScriptRoot
 try {
+    if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) {
+        Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow
+        exit 1
+    }
+    if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+        Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red
+        exit 1
+    }
     if (-not (Test-Path 'node_modules')) { & "$PSScriptRoot/setup_docs.ps1" }
-    Write-Host "Starting Astro docs dev server..." -ForegroundColor Cyan
-    $proc = Start-Process -FilePath (Get-Command npm).Source -ArgumentList 'run','dev' -PassThru
+    Write-Host 'Starting Astro docs dev server...' -ForegroundColor Cyan
+    $npm = (Get-Command npm).Source
+    if (-not $npm) { Write-Host 'npm executable not resolved.' -ForegroundColor Red; exit 1 }
+    $proc = Start-Process -FilePath $npm -ArgumentList 'run','dev' -PassThru
     Start-Sleep -Seconds 4
     $url = 'http://localhost:4321/'
-    try {
-        if ($IsWindowsPlatform) { Start-Process $url }
-        elseif ($IsMacOSPlatform) { & open $url }
-        elseif ($IsLinuxPlatform) { & xdg-open $url }
-    }
-    catch { Write-Host "Could not auto-open browser; navigate to $url" -ForegroundColor Yellow }
+    if (-not $NoBrowser) { Open-DocsBrowser -Url $url }
     Write-Host "Docs server started. PID: $($proc.Id). URL: $url" -ForegroundColor Green
+    Wait-Process -Id $proc.Id
 }
 finally { Pop-Location }
 '@
-    if (-not (Test-Path $docsSetupScript)) { Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8 }
-    $needsUpdate = (Test-Path $docsStartScript) -and (Select-String -Path $docsStartScript -Pattern '\$IsWindows=' -Quiet)
+    $existingSetupNeedsUpdate = (Test-Path $docsSetupScript) -and (Select-String -Path $docsSetupScript -Pattern '/usr/bin/env pwsh' -Quiet)
+    if ($existingSetupNeedsUpdate) {
+        Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8
+        Write-ScaffoldInfo 'Updated existing setup_docs.ps1 (removed shebang, added checks).'
+    }
+    elseif (-not (Test-Path $docsSetupScript)) {
+        Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8
+    }
+    $needsUpdate = (Test-Path $docsStartScript) -and ( (Select-String -Path $docsStartScript -Pattern '\$IsWindows=' -Quiet) -or (Select-String -Path $docsStartScript -Pattern '/usr/bin/env pwsh' -Quiet) )
     if ($needsUpdate) {
         Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
-        Write-ScaffoldInfo 'Updated existing start_docs.ps1 (replaced reserved variable usage).'
+        Write-ScaffoldInfo 'Updated existing start_docs.ps1 (removed shebang, added checks).'
     }
     elseif (-not (Test-Path $docsStartScript)) {
         Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
