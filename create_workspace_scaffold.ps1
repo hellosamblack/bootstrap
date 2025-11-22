@@ -272,6 +272,42 @@ Ensure-File $geminiFile  $geminiContent
 Ensure-File $copilotFile $copilotContent
 
 # ---------------------------------------------------------------------------
+# 3b. GitHub Agents directory (.github/agents/)
+# ---------------------------------------------------------------------------
+$githubDir = Join-Path $workspaceRoot '.github'
+$agentsDir = Join-Path $githubDir 'agents'
+Ensure-Dir $githubDir
+Ensure-Dir $agentsDir
+
+# Detect project type and create appropriate agent files
+$projectType = 'general'
+if (Test-Path (Join-Path $workspaceRoot 'ignition')) { $projectType = 'ignition' }
+elseif ((Test-Path (Join-Path $workspaceRoot 'models')) -or (Test-Path (Join-Path $workspaceRoot 'scripts/train.py'))) { $projectType = 'llm' }
+elseif ((Test-Path (Join-Path $workspaceRoot 'homeassistant')) -or (Test-Path (Join-Path $workspaceRoot 'configuration.yaml'))) { $projectType = 'homeassistant' }
+
+Write-ScaffoldInfo "Detected project type: $projectType"
+
+# Download agent templates from bootstrap repo
+$agentBaseUrl = 'https://raw.githubusercontent.com/hellosamblack/bootstrap/main/.github/agents'
+$agentFiles = @{
+    'ignition' = 'ignition-agent.md'
+    'llm' = 'llm-agent.md'
+    'homeassistant' = 'homeassistant-agent.md'
+}
+
+if ($agentFiles.ContainsKey($projectType)) {
+    $agentFile = Join-Path $agentsDir $agentFiles[$projectType]
+    if (-not (Test-Path $agentFile)) {
+        try {
+            Write-ScaffoldInfo "Downloading $($agentFiles[$projectType]) agent template"
+            Invoke-WebRequest -UseBasicParsing -Uri "$agentBaseUrl/$($agentFiles[$projectType])" -OutFile $agentFile
+        } catch {
+            Write-ScaffoldInfo "Could not download agent template (will be available after repo sync): $_"
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
 # 4. Python dependency bootstrap with torch handling
 # ---------------------------------------------------------------------------
 if ($IsWindows) { 

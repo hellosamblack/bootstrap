@@ -213,15 +213,79 @@ Remove-Item "$env:APPDATA\Code\User\create_workspace_scaffold.ps1"
 ```
 Reopen workspace to re-download.
 
-## 📚 AI Instructions
+## 📚 AI Instructions & Agents
 
-The `.ai/` directory contains standardized instructions for AI assistants:
+### AI Instruction Files (`.ai/` directory)
+
+Standardized instructions for AI assistants across all projects:
 
 - **`common-ai-instructions.md`**: Base standards (style, security, tooling)
 - **`gemini.instructions.md`**: Google Gemini-specific guidance
 - **`copilot.instructions.md`**: GitHub Copilot-specific guidance
 
 Both model-specific files reference the common instructions to maintain consistency.
+
+### GitHub Copilot Agents (`.github/agents/` directory)
+
+**NEW**: Specialized AI agents with full execution permissions for project-specific tasks. The bootstrap script automatically detects your project type and downloads the appropriate agent configuration.
+
+#### Available Agents
+
+**1. @ignition_agent** (`ignition-agent.md`)
+- **Expertise**: Ignition SCADA development
+- **Skills**: JSON configs, SQL queries, Ignition expressions, Python/Jython scripting
+- **Autonomy**: Full execution - creates Perspective views, modifies tags, writes SQL
+- **Detects**: Projects with `ignition/` directory
+- **Use cases**: Building HMI screens, writing named queries, tag configuration, gateway scripts
+
+**2. @llm_agent** (`llm-agent.md`)
+- **Expertise**: Local LLM development and deployment
+- **Skills**: PyTorch, Transformers, LoRA/QLoRA fine-tuning, GGUF quantization, inference optimization
+- **Autonomy**: Full execution - installs packages, downloads models, runs training, converts/quantizes
+- **Detects**: Projects with `models/` directory or `scripts/train.py`
+- **Use cases**: Fine-tuning models, converting to GGUF, quantization, benchmarking, dataset preparation
+
+**3. @homeassistant_agent** (`homeassistant-agent.md`)
+- **Expertise**: Home Assistant & ESPHome development
+- **Skills**: YAML configs, automations, Lovelace dashboards, ESPHome firmware, MQTT
+- **Autonomy**: Full execution - modifies configs, flashes ESP devices, creates automations
+- **Detects**: Projects with `homeassistant/` directory or `configuration.yaml`
+- **Use cases**: Building automations, configuring integrations, ESPHome devices, dashboards
+
+#### Using Agents
+
+**In GitHub Copilot Chat:**
+```
+@ignition_agent create a perspective view for tank level monitoring with alarm indicators
+
+@llm_agent fine-tune Llama-2-7b on my instruction dataset and convert to Q4_K_M GGUF
+
+@homeassistant_agent create an automation that turns on lights when motion is detected after sunset
+```
+
+**Agent Autonomy:**
+- ✅ **Full execution permissions** - Agents can make changes, create files, run commands without asking
+- ✅ **Project-aware** - Understand your tech stack, file structure, and coding standards
+- ✅ **Best practices built-in** - Follow security, performance, and maintainability guidelines
+- ⚠️ **Smart boundaries** - Know what requires confirmation (production deploys, schema changes)
+
+**Agent Features:**
+- Executable commands with exact syntax
+- Real code examples (not abstract descriptions)
+- Clear boundaries (always/ask first/never)
+- Project-specific context and standards
+- Testing and validation steps
+
+#### Customizing Agents
+
+Edit `.github/agents/*.md` files to:
+- Add project-specific commands
+- Update tech stack versions
+- Define custom code standards
+- Set additional boundaries
+- Add examples from your codebase
+
+Agents are version-controlled and sync across machines via git.
 
 ## 🤝 Contributing
 
