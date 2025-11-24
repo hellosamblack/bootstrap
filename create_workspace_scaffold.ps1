@@ -244,6 +244,19 @@ if ($selectedFeatures -contains 'vscode') {
             ],
             "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            "label": "Docs: Lint",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-Command",
+                "Push-Location docs; if (-not (Get-Command markdownlint -ErrorAction SilentlyContinue)) { npm install -g markdownlint-cli }; markdownlint 'src/content/docs/**/*.md' --ignore node_modules; Pop-Location"
+            ],
+            "presentation": { "echo": true, "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
         }
     ]
 }
@@ -534,6 +547,97 @@ _This landing page was auto-generated; customize it anytime._
             Write-ScaffoldInfo 'Landing page replaced with Diátaxis overview.'
         }
     }
+
+    # API reference generation helper script
+    $genApiScript = Join-Path $docsDir 'generate_api_docs.ps1'
+    if (-not (Test-Path $genApiScript)) {
+        $genApiContent = @'
+<#
+.SYNOPSIS
+    Generate API reference from source code comments (JSDoc/TSDoc/Python docstrings).
+.PARAMETER SourceDir
+    Root directory to scan for source files (default: ../src or ..).
+.PARAMETER OutputDir
+    Where to write generated markdown (default: src/content/docs/reference/api).
+#>
+param(
+    [string]$SourceDir = '..',
+    [string]$OutputDir = 'src/content/docs/reference/api'
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+Push-Location $PSScriptRoot
+try {
+    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+    Write-Host "Scanning $SourceDir for API documentation..." -ForegroundColor Cyan
+    # TypeScript/JavaScript: requires typedoc
+    $tsFiles = Get-ChildItem -Path $SourceDir -Recurse -Include *.ts,*.tsx,*.js,*.jsx -ErrorAction SilentlyContinue
+    if ($tsFiles) {
+        if (-not (Get-Command typedoc -ErrorAction SilentlyContinue)) {
+            Write-Host 'typedoc not found; install: npm install -g typedoc typedoc-plugin-markdown' -ForegroundColor Yellow
+        } else {
+            Write-Host 'Generating TypeScript/JS API docs with typedoc...' -ForegroundColor Cyan
+            & typedoc --out $OutputDir --plugin typedoc-plugin-markdown --entryPointStrategy expand $SourceDir
+        }
+    }
+    # Python: requires pydoc-markdown
+    $pyFiles = Get-ChildItem -Path $SourceDir -Recurse -Include *.py -ErrorAction SilentlyContinue
+    if ($pyFiles) {
+        if (-not (Get-Command pydoc-markdown -ErrorAction SilentlyContinue)) {
+            Write-Host 'pydoc-markdown not found; install: pip install pydoc-markdown' -ForegroundColor Yellow
+        } else {
+            Write-Host 'Generating Python API docs with pydoc-markdown...' -ForegroundColor Cyan
+            & pydoc-markdown --render-toc --output-directory $OutputDir
+        }
+    }
+    Write-Host "API docs generated in $OutputDir" -ForegroundColor Green
+}
+finally { Pop-Location }
+'@
+        Set-Content -Path $genApiScript -Value $genApiContent -Encoding UTF8
+        Write-ScaffoldInfo 'Created generate_api_docs.ps1 helper script.'
+    }
+
+    # Versioning helper script
+    $versionScript = Join-Path $docsDir 'version_docs.ps1'
+    if (-not (Test-Path $versionScript)) {
+        $versionContent = @'
+<#
+.SYNOPSIS
+    Create versioned copy of docs for a release tag.
+.PARAMETER Version
+    Version tag (e.g., v1.0.0).
+.PARAMETER VersionedDir
+    Base directory for versioned docs (default: src/content/docs/versions).
+#>
+param(
+    [Parameter(Mandatory)]
+    [string]$Version,
+    [string]$VersionedDir = 'src/content/docs/versions'
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+Push-Location $PSScriptRoot
+try {
+    $versionPath = Join-Path $VersionedDir $Version
+    if (Test-Path $versionPath) { Write-Host "Version $Version already exists." -ForegroundColor Yellow; exit 0 }
+    New-Item -ItemType Directory -Path $versionPath -Force | Out-Null
+    Write-Host "Creating versioned docs for $Version..." -ForegroundColor Cyan
+    # Copy current docs to versioned folder
+    Copy-Item -Path 'src/content/docs/tutorials' -Destination (Join-Path $versionPath 'tutorials') -Recurse -Force
+    Copy-Item -Path 'src/content/docs/guides' -Destination (Join-Path $versionPath 'guides') -Recurse -Force
+    Copy-Item -Path 'src/content/docs/reference' -Destination (Join-Path $versionPath 'reference') -Recurse -Force
+    Copy-Item -Path 'src/content/docs/explanation' -Destination (Join-Path $versionPath 'explanation') -Recurse -Force
+    # Update astro.config.mjs to add version to sidebar (manual step recommended)
+    Write-Host "Versioned docs created at $versionPath" -ForegroundColor Green
+    Write-Host "Update astro.config.mjs sidebar to include version entry manually." -ForegroundColor Yellow
+}
+finally { Pop-Location }
+'@
+        Set-Content -Path $versionScript -Value $versionContent -Encoding UTF8
+        Write-ScaffoldInfo 'Created version_docs.ps1 helper script.'
+    }
+
     # Docs helper scripts (setup & start) - always ensure they exist
     $docsSetupScript = Join-Path $docsDir 'setup_docs.ps1'
     $docsStartScript = Join-Path $docsDir 'start_docs.ps1'
