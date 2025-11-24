@@ -218,6 +218,32 @@ if ($selectedFeatures -contains 'vscode') {
             ],
             "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
+        },
+        {
+            "label": "Docs: Build",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-Command",
+                "Push-Location docs; if (-not (Test-Path 'node_modules')) { pwsh -File setup_docs.ps1 }; npm run build; Pop-Location"
+            ],
+            "presentation": { "echo": true, "reveal": "always", "panel": "shared" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Docs: Preview",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-Command",
+                "Push-Location docs; if (-not (Test-Path 'node_modules')) { pwsh -File setup_docs.ps1 }; npm run preview; Pop-Location"
+            ],
+            "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
+            "problemMatcher": []
         }
     ]
 }
@@ -387,7 +413,127 @@ if ($selectedFeatures -contains 'docs') {
         else { Write-ScaffoldInfo 'npm not found; skipping documentation site creation' }
     }
     else { Write-ScaffoldInfo 'Documentation site already exists; skipping.' }
+    # Enhance Starlight configuration & Diátaxis placeholders
+    $astroConfigPath = Join-Path $docsDir 'astro.config.mjs'
+    if (Test-Path $astroConfigPath) {
+        $cfgRaw = Get-Content $astroConfigPath -Raw
+        if ($cfgRaw -match "title: 'My Docs'") {
+            $projectName = Split-Path -Leaf $workspaceRoot
+            $enhancedCfg = @"
+// @ts-check
+import { defineConfig } from 'astro/config';
+import starlight from '@astrojs/starlight';
 
+export default defineConfig({
+  integrations: [
+    starlight({
+      title: '${projectName} Docs',
+      sidebar: [
+        { label: 'Tutorials', autogenerate: { directory: 'tutorials' } },
+        { label: 'Guides', autogenerate: { directory: 'guides' } },
+        { label: 'Reference', autogenerate: { directory: 'reference' } },
+        { label: 'Explanation', autogenerate: { directory: 'explanation' } },
+      ],
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/hellosamblack' }
+      ],
+      customHead: [
+        {
+          tag: 'script',
+          attrs: { type: 'module' },
+          content: "const mq=window.matchMedia('(prefers-color-scheme: dark)');function apply(){document.documentElement.dataset.theme=mq.matches?'dark':'light';}apply();mq.addEventListener('change',apply);"
+        }
+      ]
+    })
+  ]
+});
+"@
+            Set-Content -Path $astroConfigPath -Value $enhancedCfg -Encoding UTF8
+            Write-ScaffoldInfo 'astro.config.mjs enhanced with Diátaxis sidebar & system theme auto.'
+        }
+    }
+    # Seed pages
+    $contentDir = Join-Path $docsDir 'src\content\docs'
+    $seedPages = @{
+        (Join-Path $contentDir 'tutorials\getting-started.md') = @"---
+title: Getting Started
+description: Quick start tutorial.
+---
+
+Welcome! This tutorial walks you through the essentials.
+1. Installation
+2. Configuration
+3. First deployment
+
+Next: edit this page to tailor steps to your project.
+"@
+        (Join-Path $contentDir 'guides\overview.md') = @"---
+title: Project Overview Guide
+description: High-level guide.
+---
+
+This guide provides a structured path for common tasks.
+
+Sections:
+- Environment setup
+- Development workflow
+- Testing & quality
+- Deployment procedures
+"@
+        (Join-Path $contentDir 'reference\index.md') = @"---
+title: API Reference Index
+description: Entry point for reference material.
+---
+
+Reference pages document precise interfaces, commands, and configuration options.
+Add files under 'reference/' to expand this index automatically.
+"@
+        (Join-Path $contentDir 'explanation\concepts.md') = @"---
+title: Core Concepts
+description: Deeper conceptual explanations.
+---
+
+Use explanation pages for reasoning, design decisions, and architecture notes.
+"@
+    }
+    foreach ($p in $seedPages.Keys) {
+        if (-not (Test-Path $p)) { Set-Content -Path $p -Value $seedPages[$p] -Encoding UTF8 }
+    }
+
+    # Replace landing page if still default
+    $landing = Join-Path $contentDir 'index.mdx'
+    if (Test-Path $landing) {
+        $landingRaw = Get-Content $landing -Raw
+        if ($landingRaw -match 'Welcome to Starlight') {
+            $newLanding = @"---
+title: Welcome
+description: Entry point for the ${projectName} documentation.
+hero:
+  tagline: ${projectName} Knowledge Base
+  actions:
+    - text: Getting Started Tutorial
+      link: /tutorials/getting-started/
+      icon: right-arrow
+    - text: Guides Overview
+      link: /guides/overview/
+      icon: document
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="Tutorials" icon="pencil">Step-by-step instructions for accomplishing tasks.</Card>
+  <Card title="Guides" icon="setting">Opinionated paths through common workflows.</Card>
+  <Card title="Reference" icon="open-book">Authoritative source for APIs and configuration.</Card>
+  <Card title="Explanation" icon="document">Concepts, architecture decisions, and rationale.</Card>
+</CardGrid>
+
+_This landing page was auto-generated; customize it anytime._
+"@
+            Set-Content -Path $landing -Value $newLanding -Encoding UTF8
+            Write-ScaffoldInfo 'Landing page replaced with Diátaxis overview.'
+        }
+    }
     # Docs helper scripts (setup & start) - always ensure they exist
     $docsSetupScript = Join-Path $docsDir 'setup_docs.ps1'
     $docsStartScript = Join-Path $docsDir 'start_docs.ps1'
@@ -422,11 +568,18 @@ finally { Pop-Location }
     $startContent = @'
 <#
 .SYNOPSIS
-    Start Astro docs dev server (blocking) with optional deferred browser open.
+    Start Astro docs dev server with host/port & auto system theme.
+.PARAMETER Port
+    Port to bind (default 4321).
+.PARAMETER Expose
+    Bind to 0.0.0.0 instead of localhost.
 .PARAMETER NoBrowser
-    Skip auto-opening the browser.
+    Skip auto-opening browser.
 #>
-param([switch]$NoBrowser)
+param([
+  int]$Port = 4321,
+  [switch]$Expose,
+  [switch]$NoBrowser)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $uname=''; try { $uname=(uname) 2>$null } catch {}
@@ -435,22 +588,21 @@ $IsLinuxPlatform=(-not $IsWindowsPlatform -and (Test-Path '/etc/os-release'))
 $IsMacOSPlatform=(-not $IsWindowsPlatform -and -not $IsLinuxPlatform -and $uname -eq 'Darwin')
 Push-Location $PSScriptRoot
 try {
-  if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) {
-    Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow
-    exit 1
-  }
-  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red
-    exit 1
-  }
-  if (-not (Test-Path 'node_modules')) { & "$PSScriptRoot/setup_docs.ps1" }
-  $npm = (Get-Command npm).Source
-  $url = 'http://localhost:4321'
-  Write-Host 'Starting Astro docs dev server (blocking)...' -ForegroundColor Cyan
+  $HostBind = if ($Expose) { '0.0.0.0' } else { 'localhost' }
+  if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) { Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow; exit 1 }
+  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red; exit 1 }
+  if (-not (Test-Path (Join-Path $PSScriptRoot 'node_modules'))) { Write-Host 'node_modules missing; invoking setup_docs.ps1' -ForegroundColor Yellow; & (Join-Path $PSScriptRoot 'setup_docs.ps1') }
+  $astroExe = if ($IsWindowsPlatform) { Join-Path $PSScriptRoot 'node_modules\.@astrojs__cli\dist\astro.exe' } else { Join-Path $PSScriptRoot 'node_modules/.bin/astro' }
+  if (-not (Test-Path $astroExe)) { $astroExe = if ($IsWindowsPlatform) { Join-Path $PSScriptRoot 'node_modules\.bin\astro.cmd' } else { Join-Path $PSScriptRoot 'node_modules/.bin/astro' } }
+  $Url = "http://$HostBind:$Port/"
+  Write-Host "Starting Astro docs dev server on $HostBind:$Port (blocking)..." -ForegroundColor Cyan
   if (-not $NoBrowser) {
-    Start-Job -ScriptBlock { Start-Sleep -Seconds 4; try { Start-Process 'http://localhost:4321' } catch {} } | Out-Null
+    Start-Job -ScriptBlock { param($H,$P)
+      for ($i=0;$i -lt 30;$i++) { try { $r=Invoke-WebRequest -Uri "http://$H:$P/" -UseBasicParsing -ErrorAction SilentlyContinue; if ($r.StatusCode -eq 200) { try { Start-Process "http://$H:$P/" } catch {}; break } } catch {} ; Start-Sleep 1 }
+    } -ArgumentList $HostBind,$Port | Out-Null
   }
-  & $npm 'run' 'dev'
+  if (Test-Path $astroExe) { & $astroExe dev --port $Port --host $HostBind }
+  else { $npmExe=(Get-Command npm).Source; & $npmExe 'run' 'dev' '--' '--port' $Port '--host' $HostBind }
   Write-Host 'Docs dev process exited.' -ForegroundColor Yellow
 }
 finally { Pop-Location }
