@@ -450,7 +450,7 @@ export default defineConfig({
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/hellosamblack' }
       ],
-      customHead: [
+      head: [
         {
           tag: 'script',
           attrs: { type: 'module' },
