@@ -468,7 +468,8 @@ export default defineConfig({
     # Seed pages
     $contentDir = Join-Path $docsDir 'src\content\docs'
     $seedPages = @{
-        (Join-Path $contentDir 'tutorials\getting-started.md') = @"---
+        (Join-Path $contentDir 'tutorials\getting-started.md') = @"
+---
 title: Getting Started
 description: Quick start tutorial.
 ---
@@ -480,7 +481,8 @@ Welcome! This tutorial walks you through the essentials.
 
 Next: edit this page to tailor steps to your project.
 "@
-        (Join-Path $contentDir 'guides\overview.md') = @"---
+        (Join-Path $contentDir 'guides\overview.md') = @"
+---
 title: Project Overview Guide
 description: High-level guide.
 ---
@@ -493,7 +495,8 @@ Sections:
 - Testing & quality
 - Deployment procedures
 "@
-        (Join-Path $contentDir 'reference\index.md') = @"---
+        (Join-Path $contentDir 'reference\index.md') = @"
+---
 title: API Reference Index
 description: Entry point for reference material.
 ---
@@ -501,7 +504,8 @@ description: Entry point for reference material.
 Reference pages document precise interfaces, commands, and configuration options.
 Add files under 'reference/' to expand this index automatically.
 "@
-        (Join-Path $contentDir 'explanation\concepts.md') = @"---
+        (Join-Path $contentDir 'explanation\concepts.md') = @"
+---
 title: Core Concepts
 description: Deeper conceptual explanations.
 ---
@@ -518,7 +522,8 @@ Use explanation pages for reasoning, design decisions, and architecture notes.
     if (Test-Path $landing) {
         $landingRaw = Get-Content $landing -Raw
         if ($landingRaw -match 'Welcome to Starlight') {
-            $newLanding = @"---
+            $newLanding = @"
+---
 title: Welcome
 description: Entry point for the ${projectName} documentation.
 hero:
@@ -532,7 +537,7 @@ hero:
       icon: document
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components'
 
 <CardGrid stagger>
   <Card title="Tutorials" icon="pencil">Step-by-step instructions for accomplishing tasks.</Card>
@@ -698,11 +703,11 @@ try {
   if (-not (Test-Path (Join-Path $PSScriptRoot 'node_modules'))) { Write-Host 'node_modules missing; invoking setup_docs.ps1' -ForegroundColor Yellow; & (Join-Path $PSScriptRoot 'setup_docs.ps1') }
   $astroExe = if ($IsWindowsPlatform) { Join-Path $PSScriptRoot 'node_modules\.@astrojs__cli\dist\astro.exe' } else { Join-Path $PSScriptRoot 'node_modules/.bin/astro' }
   if (-not (Test-Path $astroExe)) { $astroExe = if ($IsWindowsPlatform) { Join-Path $PSScriptRoot 'node_modules\.bin\astro.cmd' } else { Join-Path $PSScriptRoot 'node_modules/.bin/astro' } }
-  $Url = "http://$HostBind:$Port/"
+  $Url = "http: / / $HostBind:$Port / "
   Write-Host "Starting Astro docs dev server on $HostBind:$Port (blocking)..." -ForegroundColor Cyan
   if (-not $NoBrowser) {
     Start-Job -ScriptBlock { param($H,$P)
-      for ($i=0;$i -lt 30;$i++) { try { $r=Invoke-WebRequest -Uri "http://$H:$P/" -UseBasicParsing -ErrorAction SilentlyContinue; if ($r.StatusCode -eq 200) { try { Start-Process "http://$H:$P/" } catch {}; break } } catch {} ; Start-Sleep 1 }
+      for ($i=0;$i -lt 30;$i++) { try { $r=Invoke-WebRequest -Uri "http: / / $H:$P / " -UseBasicParsing -ErrorAction SilentlyContinue; if ($r.StatusCode -eq 200) { try { Start-Process "http: / / $H:$P / " } catch {}; break } } catch {} ; Start-Sleep 1 }
     } -ArgumentList $HostBind,$Port | Out-Null
   }
   if (Test-Path $astroExe) { & $astroExe dev --port $Port --host $HostBind }
