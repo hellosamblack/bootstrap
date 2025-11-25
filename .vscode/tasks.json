@@ -28,7 +28,11 @@
           "if command -v npx >/dev/null 2>&1; then npx markdownlint . --fix --ext .md; elif command -v markdownlint >/dev/null 2>&1; then markdownlint . --fix --ext .md; else echo 'markdownlint not available' 1>&2; exit 1; fi"
         ]
       },
-      "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
       "problemMatcher": []
     },
     {
@@ -58,7 +62,11 @@
           "if command -v npx >/dev/null 2>&1; then npx prettier --write .; elif command -v prettier >/dev/null 2>&1; then prettier --write .; else echo 'Prettier not available' 1>&2; exit 1; fi"
         ]
       },
-      "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
       "problemMatcher": []
     },
     {
@@ -88,7 +96,11 @@
           "if command -v npx >/dev/null 2>&1; then npx eslint . --fix --ext .js,.jsx,.ts,.tsx; elif command -v eslint >/dev/null 2>&1; then eslint . --fix --ext .js,.jsx,.ts,.tsx; else echo 'eslint not available' 1>&2; exit 1; fi"
         ]
       },
-      "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
       "problemMatcher": []
     }
   ]
