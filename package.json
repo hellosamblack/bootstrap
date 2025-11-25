@@ -1,0 +1,13 @@
+{
+  "name": "bootstrap",
+  "private": true,
+  "devDependencies": {
+    "prettier": "^2.8.8",
+    "markdownlint-cli": "^0.35.0"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "lint:md": "markdownlint --fix '**/*.md' || true",
+    "lint:md:check": "markdownlint '**/*.md'"
+  }
+}
