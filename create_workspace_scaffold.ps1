@@ -245,45 +245,7 @@ if ($selectedFeatures -contains 'vscode') {
             "presentation": { "echo": true, "reveal": "always", "panel": "dedicated" },
             "problemMatcher": []
         },
-        {
-            "label": "Docs: Lint",
-            "type": "shell",
-            "command": "pwsh",
-            "args": [
-                "-NoProfile",
-                "-ExecutionPolicy","Bypass",
-                "-Command",
-                "Push-Location docs; if (-not (Get-Command markdownlint -ErrorAction SilentlyContinue)) { npm install -g markdownlint-cli }; markdownlint 'src/content/docs/**/*.md' --ignore node_modules; Pop-Location"
-            ],
-            "presentation": { "echo": true, "reveal": "always", "panel": "shared" },
-            "problemMatcher": []
-        }
-        ,
         
-        {
-            "label": "Markdownlint: Fix",
-            "type": "shell",
-            "command": "pwsh",
-            "args": [
-                "-NoProfile",
-                "-ExecutionPolicy","Bypass",
-                "-Command","if (Get-Command npx -ErrorAction SilentlyContinue) { npx markdownlint . --fix --ignore node_modules } elseif (Get-Command markdownlint -ErrorAction SilentlyContinue) { markdownlint . --fix --ignore node_modules } else { Write-Host 'markdownlint CLI not available' }"
-            ],
-            "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
-            "problemMatcher": []
-        },
-        {
-            "label": "Prettier: Format All",
-            "type": "shell",
-            "command": "pwsh",
-            "args": [
-                "-NoProfile",
-                "-ExecutionPolicy","Bypass",
-                "-Command","if (Get-Command npx -ErrorAction SilentlyContinue) { npx prettier --write . } elseif (Get-Command prettier -ErrorAction SilentlyContinue) { prettier --write . } else { Write-Host 'Prettier CLI not available' }"
-            ],
-            "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
-            "problemMatcher": []
-        }
     ]
 }
 '@
