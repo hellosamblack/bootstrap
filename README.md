@@ -52,6 +52,8 @@ Add the appropriate task to your VS Code `tasks.json` (User level: `File > Prefe
 }
 ```
 
+Note: For cross-platform developer workflows, the repo provides a `tasks.json` template under `.vscode/tasks.json` with cross-platform task definitions for Prettier, ESLint, and Markdownlint. The bootstrap generator no longer inserts lint tasks into target workspace `tasks.json`; instead, prefer the user-level `tasks.json` (VS Code user) to ensure tasks are configured to your host environment.
+
 **Linux/macOS (Bash):**
 
 ```json
