@@ -258,10 +258,51 @@ if ($selectedFeatures -contains 'vscode') {
             "presentation": { "echo": true, "reveal": "always", "panel": "shared" },
             "problemMatcher": []
         }
+        ,
+        
+        {
+            "label": "Markdownlint: Fix",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-Command","if (Get-Command npx -ErrorAction SilentlyContinue) { npx markdownlint . --fix --ignore node_modules } elseif (Get-Command markdownlint -ErrorAction SilentlyContinue) { markdownlint . --fix --ignore node_modules } else { Write-Host 'markdownlint CLI not available' }"
+            ],
+            "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Prettier: Format All",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy","Bypass",
+                "-Command","if (Get-Command npx -ErrorAction SilentlyContinue) { npx prettier --write . } elseif (Get-Command prettier -ErrorAction SilentlyContinue) { prettier --write . } else { Write-Host 'Prettier CLI not available' }"
+            ],
+            "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+            "problemMatcher": []
+        }
     ]
 }
 '@
     Set-Content -Path $tasksFile -Value $tasksContent -Encoding UTF8
+    # Recommend editor extensions for improved formatting and linting
+    $extensionsJson = @{
+        recommendations         = @(
+            'esbenp.prettier-vscode',
+            'DavidAnson.vscode-markdownlint',
+            'dbaeumer.vscode-eslint',
+            'ms-python.python',
+            'ms-python.black-formatter',
+            'charliermarsh.ruff'
+        )
+        unwantedRecommendations = @()
+    }
+    $extensionsContent = $extensionsJson | ConvertTo-Json -Depth 3
+    $extensionsFile = Join-Path $dirVscode 'extensions.json'
+    if (-not (Test-Path $extensionsFile)) { Set-Content -Path $extensionsFile -Value $extensionsContent -Encoding UTF8 }
     if (-not (Test-Path $settingsFile)) {
         Write-ScaffoldInfo 'Creating settings.json with absolute interpreter path'
         if ($IsWindowsPlatform) { $interpreterAbsolute = Join-Path -Path $workspaceRoot -ChildPath '.venv\Scripts\python.exe' }
@@ -277,9 +318,63 @@ if ($selectedFeatures -contains 'vscode') {
             'python.linting.flake8Args'                    = @('--max-line-length=120')
             'python.testing.pytestEnabled'                 = $true
             'python.testing.unittestEnabled'               = $false
+            'editor.defaultFormatter'                      = 'esbenp.prettier-vscode'
+            'editor.formatOnSave'                          = $true
+            'editor.codeActionsOnSave'                     = @{
+                'source.fixAll'              = $true
+                'source.fixAll.markdownlint' = $true
+                'source.fixAll.eslint'       = $true
+                'source.organizeImports'     = $true
+            }
+            'editor.codeActionsOnSaveTimeout'              = 1500
+            'eslint.run'                                   = 'onSave'
+            'eslint.autoFixOnSave'                         = $true
+            '[markdown]'                                   = @{
+                'editor.defaultFormatter'  = 'esbenp.prettier-vscode'
+                'editor.formatOnSave'      = $true
+                'editor.codeActionsOnSave' = @{
+                    'source.fixAll'              = $true
+                    'source.fixAll.markdownlint' = $true
+                }
+            }
+            '[javascript]'                                 = @{
+                'editor.defaultFormatter'  = 'esbenp.prettier-vscode'
+                'editor.formatOnSave'      = $true
+                'editor.codeActionsOnSave' = @{
+                    'source.fixAll.eslint'   = $true
+                    'source.organizeImports' = $true
+                }
+            }
+            '[typescript]'                                 = @{
+                'editor.defaultFormatter'  = 'esbenp.prettier-vscode'
+                'editor.formatOnSave'      = $true
+                'editor.codeActionsOnSave' = @{
+                    'source.fixAll.eslint'   = $true
+                    'source.organizeImports' = $true
+                }
+            }
         }
         $settingsContent = $settingsObject | ConvertTo-Json -Depth 4
         Set-Content -Path $settingsFile -Value $settingsContent -Encoding UTF8
+        # Copy prettierrc and markdownlint config from bootstrap templates if present
+        $scriptDir = $PSScriptRoot
+        $repoPrettier = Join-Path $scriptDir '.prettierrc'
+        $repoMdLint = Join-Path $scriptDir '.markdownlint.json'
+        if (Test-Path $repoPrettier -and -not (Test-Path (Join-Path $workspaceRoot '.prettierrc'))) {
+            Copy-Item -Path $repoPrettier -Destination (Join-Path $workspaceRoot '.prettierrc') -Force
+            Write-ScaffoldInfo 'Copied .prettierrc into workspace'
+        }
+        if (Test-Path $repoMdLint -and -not (Test-Path (Join-Path $workspaceRoot '.markdownlint.json'))) {
+            Copy-Item -Path $repoMdLint -Destination (Join-Path $workspaceRoot '.markdownlint.json') -Force
+            Write-ScaffoldInfo 'Copied .markdownlint.json into workspace'
+        }
+        # Copy helper scripts into workspace (eg: fix_ trailing_backticks.ps1)
+        $srcScripts = Join-Path $scriptDir 'scripts'
+        $destScripts = Join-Path $workspaceRoot 'scripts'
+        if (Test-Path $srcScripts -and -not (Test-Path $destScripts)) {
+            Copy-Item -Path $srcScripts -Destination $destScripts -Recurse -Force
+            Write-ScaffoldInfo 'Copied helper scripts into workspace (scripts/)'
+        }
     }
 }
 else { Write-ScaffoldInfo 'Skipping VS Code config feature.' }
