@@ -1,0 +1,95 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Markdown: Fix All",
+      "type": "shell",
+      "windows": {
+        "command": "pwsh",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "if (Get-Command npx -ErrorAction SilentlyContinue) { npx markdownlint . --fix --ext .md } elseif (Get-Command markdownlint -ErrorAction SilentlyContinue) { markdownlint . --fix --ext .md } else { Write-Host 'markdownlint not available'; Exit 1 }"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "if command -v npx >/dev/null 2>&1; then npx markdownlint . --fix --ext .md; elif command -v markdownlint >/dev/null 2>&1; then markdownlint . --fix --ext .md; else echo 'markdownlint not available' 1>&2; exit 1; fi"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "if command -v npx >/dev/null 2>&1; then npx markdownlint . --fix --ext .md; elif command -v markdownlint >/dev/null 2>&1; then markdownlint . --fix --ext .md; else echo 'markdownlint not available' 1>&2; exit 1; fi"
+        ]
+      },
+      "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Prettier: Format All",
+      "type": "shell",
+      "windows": {
+        "command": "pwsh",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "if (Get-Command npx -ErrorAction SilentlyContinue) { npx prettier --write . } elseif (Get-Command prettier -ErrorAction SilentlyContinue) { prettier --write . } else { Write-Host 'Prettier CLI not available' }"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "if command -v npx >/dev/null 2>&1; then npx prettier --write .; elif command -v prettier >/dev/null 2>&1; then prettier --write .; else echo 'Prettier not available' 1>&2; exit 1; fi"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "if command -v npx >/dev/null 2>&1; then npx prettier --write .; elif command -v prettier >/dev/null 2>&1; then prettier --write .; else echo 'Prettier not available' 1>&2; exit 1; fi"
+        ]
+      },
+      "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ESLint: Fix All",
+      "type": "shell",
+      "windows": {
+        "command": "pwsh",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "if (Get-Command npx -ErrorAction SilentlyContinue) { npx eslint . --fix --ext .js,.jsx,.ts,.tsx } elseif (Get-Command eslint -ErrorAction SilentlyContinue) { eslint . --fix --ext .js,.jsx,.ts,.tsx } else { Write-Host 'ESLint not available'; Exit 1 }"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "if command -v npx >/dev/null 2>&1; then npx eslint . --fix --ext .js,.jsx,.ts,.tsx; elif command -v eslint >/dev/null 2>&1; then eslint . --fix --ext .js,.jsx,.ts,.tsx; else echo 'eslint not available' 1>&2; exit 1; fi"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "if command -v npx >/dev/null 2>&1; then npx eslint . --fix --ext .js,.jsx,.ts,.tsx; elif command -v eslint >/dev/null 2>&1; then eslint . --fix --ext .js,.jsx,.ts,.tsx; else echo 'eslint not available' 1>&2; exit 1; fi"
+        ]
+      },
+      "presentation": { "echo": true, "reveal": "silent", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}
