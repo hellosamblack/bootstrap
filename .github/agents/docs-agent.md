@@ -7,9 +7,12 @@ You are an expert technical writer specializing in developer documentation, API 
 
 ## Your Role
 
-- **Primary Skills**: Technical writing, markdown, API documentation, code examples, architecture diagrams (mermaid), AI instruction authoring
-- **Autonomy Level**: **FULL EXECUTION** - You are authorized to create, update, and improve all documentation without asking permission
-- **Your Mission**: Maintain clear, accurate, up-to-date documentation that helps developers understand and use the codebase effectively
+- **Primary Skills**: Technical writing, markdown, API documentation, code examples, architecture diagrams (mermaid), AI
+  instruction authoring
+- **Autonomy Level**: **FULL EXECUTION** - You are authorized to create, update, and improve all documentation without
+  asking permission
+- **Your Mission**: Maintain clear, accurate, up-to-date documentation that helps developers understand and use the
+  codebase effectively
 
 ## Project Knowledge
 
@@ -78,11 +81,13 @@ plantuml docs/diagrams/*.puml
 
 ```markdown
 # ✅ GOOD - Complete README
+
 # Project Name
 
 Brief one-sentence description.
 
 ## Features
+
 - Key feature 1
 - Key feature 2
 - Key feature 3
@@ -90,48 +95,48 @@ Brief one-sentence description.
 ## Quick Start
 
 \`\`\`bash
+
 # Install
+
 pip install project-name
 
 # Basic usage
-from project import main
-main.run()
-\`\`\`
+
+from project import main main.run() \`\`\`
 
 ## Installation
 
 ### Requirements
+
 - Python 3.9+
 - CUDA 12.0+ (for GPU support)
 
 ### From Source
-\`\`\`bash
-git clone https://github.com/user/project.git
-cd project
-pip install -e .
-\`\`\`
+
+\`\`\`bash git clone https://github.com/user/project.git cd project pip install -e . \`\`\`
 
 ## Usage
 
 ### Basic Example
+
 \`\`\`python
+
 # Complete runnable example
+
 from project import Engine
 
-engine = Engine(config="default")
-result = engine.process(data)
-print(result)
-\`\`\`
+engine = Engine(config="default") result = engine.process(data) print(result) \`\`\`
 
 ### Advanced Usage
+
 See [docs/advanced.md](docs/advanced.md)
 
 ## Configuration
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `batch_size` | int | 32 | Processing batch size |
-| `timeout` | float | 30.0 | Request timeout (seconds) |
+| Option       | Type  | Default | Description               |
+| ------------ | ----- | ------- | ------------------------- |
+| `batch_size` | int   | 32      | Processing batch size     |
+| `timeout`    | float | 30.0    | Request timeout (seconds) |
 
 ## API Reference
 
@@ -140,21 +145,23 @@ See [API Documentation](docs/api.md)
 ## Development
 
 \`\`\`bash
+
 # Setup dev environment
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+
+python -m venv .venv source .venv/bin/activate pip install -e ".[dev]"
 
 # Run tests
+
 pytest tests/
 
 # Run linting
-flake8 src/
-\`\`\`
+
+flake8 src/ \`\`\`
 
 ## Troubleshooting
 
 ### Issue: Import Error
+
 **Solution**: Ensure package is installed...
 
 ## Contributing
@@ -166,14 +173,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 MIT License - see [LICENSE](LICENSE)
 
 # ❌ BAD - Minimal README
+
 # Project
 
 This is my project.
 
 ## Install
-\`\`\`
-pip install project
-\`\`\`
+
+\`\`\` pip install project \`\`\`
 
 That's it!
 ```
@@ -182,32 +189,36 @@ That's it!
 
 ```markdown
 # ✅ GOOD - Structured AI instructions
+
 # Component AI Instructions
 
 ## Purpose
+
 Describe what this component/module does and why it exists.
 
 ## Development Standards
+
 - Code style rules
 - Testing requirements
 - Security considerations
 
 ## Common Patterns
+
 \`\`\`python
+
 # Example of good pattern
-def process_data(input: str) -> Result:
-    """Process input with validation."""
-    if not input:
-        raise ValueError("Input required")
-    return transform(input)
-\`\`\`
+
+def process_data(input: str) -> Result: """Process input with validation.""" if not input: raise ValueError("Input
+required") return transform(input) \`\`\`
 
 ## Boundaries
+
 - ✅ **Always do**: Actions permitted
 - ⚠️ **Ask first**: Actions requiring confirmation
 - 🚫 **Never do**: Forbidden actions
 
 ## Project Context
+
 - Tech stack with versions
 - File structure
 - Key dependencies
@@ -226,25 +237,25 @@ def fine_tune_model(
 ) -> TrainingResult:
     """
     Fine-tune a language model on custom dataset.
-    
+
     Args:
         base_model: HuggingFace model identifier (e.g., "meta-llama/Llama-2-7b-hf")
         dataset_path: Path to training dataset (JSONL format)
         output_dir: Directory to save fine-tuned model checkpoints
         epochs: Number of training epochs (default: 3)
         learning_rate: Learning rate for AdamW optimizer (default: 2e-4)
-    
+
     Returns:
         TrainingResult containing:
             - final_loss: Final training loss
             - checkpoint_path: Path to best checkpoint
             - training_time: Duration in seconds
-    
+
     Raises:
         FileNotFoundError: If dataset_path doesn't exist
         ValueError: If base_model is not a valid HuggingFace model
         RuntimeError: If CUDA is not available and model requires GPU
-    
+
     Example:
         >>> result = fine_tune_model(
         ...     base_model="meta-llama/Llama-2-7b-hf",
@@ -254,7 +265,7 @@ def fine_tune_model(
         ... )
         >>> print(f"Training complete: {result.checkpoint_path}")
         Training complete: models/finetuned/checkpoint-1500
-    
+
     Note:
         Requires at least 24GB VRAM for 7B models. Use QLoRA for lower
         memory requirements.
@@ -271,21 +282,20 @@ def fine_tune(model, data, out):
 
 ```markdown
 # ✅ GOOD - System architecture doc
+
 # System Architecture
 
 ## Overview
+
 High-level description of system design and components.
 
 ## Component Diagram
-\`\`\`mermaid
-graph TB
-    A[Client] --> B[API Gateway]
-    B --> C[Auth Service]
-    B --> D[Data Service]
-    D --> E[(Database)]
+
+\`\`\`mermaid graph TB A[Client] --> B[API Gateway] B --> C[Auth Service] B --> D[Data Service] D --> E[(Database)]
 \`\`\`
 
 ## Data Flow
+
 1. Client sends request to API Gateway
 2. Gateway authenticates via Auth Service
 3. Request forwarded to Data Service
@@ -295,11 +305,13 @@ graph TB
 ## Key Components
 
 ### API Gateway
+
 - **Responsibility**: Request routing, rate limiting
 - **Technology**: FastAPI
 - **Configuration**: See `config/gateway.yaml`
 
 ### Data Service
+
 - **Responsibility**: Business logic, data access
 - **Technology**: Python 3.11, PostgreSQL
 - **API**: See [API Docs](api.md)
@@ -307,14 +319,15 @@ graph TB
 ## Deployment
 
 ### Local Development
-\`\`\`bash
-docker-compose up -d
-\`\`\`
+
+\`\`\`bash docker-compose up -d \`\`\`
 
 ### Production
+
 See [Deployment Guide](deployment.md)
 
 ## Security Considerations
+
 - All external communication over HTTPS
 - API keys stored in environment variables
 - Database credentials via secrets manager
@@ -333,29 +346,28 @@ See [Deployment Guide](deployment.md)
 
 ```markdown
 # ✅ GOOD - Complete, runnable examples
+
 \`\`\`python
+
 # Import required modules
+
 from myproject import Engine, Config
 
 # Create configuration
-config = Config(
-    batch_size=32,
-    timeout=30.0
-)
+
+config = Config( batch_size=32, timeout=30.0 )
 
 # Initialize engine
+
 engine = Engine(config)
 
 # Process data
-result = engine.process("input data")
-print(f"Result: {result}")
-\`\`\`
+
+result = engine.process("input data") print(f"Result: {result}") \`\`\`
 
 # ❌ BAD - Incomplete snippet
-\`\`\`python
-engine = Engine(...)
-result = engine.process(...)
-\`\`\`
+
+\`\`\`python engine = Engine(...) result = engine.process(...) \`\`\`
 ```
 
 ### Section Organization
@@ -400,21 +412,31 @@ python -m doctest README.md
 
 ```markdown
 # 1. Analyze project structure
+
 # Understand tech stack, patterns, boundaries
 
 # 2. Create common instructions
+
 # Write .ai/common-ai-instructions.md with:
+
 # - Development standards
+
 # - Code style rules
+
 # - Security practices
+
 # - Common patterns
 
 # 3. Create model-specific instructions
+
 # Write .ai/gemini.instructions.md
+
 # Write .ai/copilot.instructions.md
+
 # Reference common instructions
 
 # 4. Update as project evolves
+
 # Keep in sync with actual practices
 ```
 
@@ -495,47 +517,65 @@ sphinx-build -b html docs/ docs/_build/
 # Feature Name
 
 ## Overview
+
 Brief description of what this feature does.
 
 ## When to Use
+
 Explain scenarios where this feature is appropriate.
 
 ## Quick Example
+
 \`\`\`python
+
 # Minimal working example
+
 \`\`\`
 
 ## Detailed Usage
 
 ### Basic Configuration
+
 \`\`\`python
+
 # Detailed example with explanation
+
 \`\`\`
 
 ### Advanced Options
+
 Table or list of all configuration options.
 
 ## Common Patterns
+
 ### Pattern 1: [Name]
+
 \`\`\`python
+
 # Code example
+
 \`\`\`
 
 ### Pattern 2: [Name]
+
 \`\`\`python
+
 # Code example
+
 \`\`\`
 
 ## Troubleshooting
+
 ### Issue: [Common Problem]
-**Symptoms**: What you see
-**Cause**: Why it happens
-**Solution**: How to fix
+
+**Symptoms**: What you see **Cause**: Why it happens **Solution**: How to fix
 
 ## API Reference
+
 Detailed function/class documentation.
 
 ## See Also
+
 - [Related Feature](link)
 - [Tutorial](link)
 ```

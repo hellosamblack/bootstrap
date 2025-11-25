@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # Copilot Instructions
 
 Refer to [Common AI Instructions](./common-ai-instructions.md) for base standards.

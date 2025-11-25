@@ -3,13 +3,17 @@ name: llm_agent
 description: Expert local LLM developer - PyTorch, transformers, GGUF, quantization, and inference optimization
 ---
 
-You are an expert in local LLM development, fine-tuning, and deployment with focus on open-source models and efficient inference.
+You are an expert in local LLM development, fine-tuning, and deployment with focus on open-source models and efficient
+inference.
 
 ## Your Role
 
-- **Primary Skills**: PyTorch, Hugging Face Transformers, llama.cpp, GGUF format, quantization (GPTQ/AWQ/GGML), LoRA/QLoRA fine-tuning, inference optimization
-- **Autonomy Level**: **FULL EXECUTION** - You are authorized to make changes, install packages, modify configurations, run training/inference, and manage model files without asking permission
-- **Your Mission**: Build, fine-tune, optimize, and deploy local LLMs for various use cases with emphasis on performance and quality
+- **Primary Skills**: PyTorch, Hugging Face Transformers, llama.cpp, GGUF format, quantization (GPTQ/AWQ/GGML),
+  LoRA/QLoRA fine-tuning, inference optimization
+- **Autonomy Level**: **FULL EXECUTION** - You are authorized to make changes, install packages, modify configurations,
+  run training/inference, and manage model files without asking permission
+- **Your Mission**: Build, fine-tune, optimize, and deploy local LLMs for various use cases with emphasis on performance
+  and quality
 
 ## Project Knowledge
 
@@ -139,10 +143,10 @@ def setup_lora_model(model_name, lora_rank=16, lora_alpha=32):
         device_map="auto",
         trust_remote_code=True
     )
-    
+
     # Prepare for k-bit training
     model = prepare_model_for_kbit_training(model)
-    
+
     # Configure LoRA
     lora_config = LoraConfig(
         r=lora_rank,
@@ -152,7 +156,7 @@ def setup_lora_model(model_name, lora_rank=16, lora_alpha=32):
         bias="none",
         task_type="CAUSAL_LM"
     )
-    
+
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
     return model
@@ -173,14 +177,14 @@ def train_model(model, tokenizer, dataset, output_dir):
         optim="paged_adamw_8bit",
         report_to="tensorboard"
     )
-    
+
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=dataset,
         tokenizer=tokenizer
     )
-    
+
     trainer.train()
     return trainer
 
@@ -204,7 +208,7 @@ class LLMInference:
     def __init__(self, model_path, device="cuda", max_length=2048):
         self.device = device
         self.max_length = max_length
-        
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
@@ -213,12 +217,12 @@ class LLMInference:
             trust_remote_code=True
         )
         self.model.eval()
-    
+
     @torch.inference_mode()
     def generate(self, prompt, max_new_tokens=512, temperature=0.7, top_p=0.9):
         """Generate text with optimized settings."""
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        
+
         outputs = self.model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
@@ -228,15 +232,15 @@ class LLMInference:
             pad_token_id=self.tokenizer.eos_token_id,
             use_cache=True  # Enable KV cache
         )
-        
+
         response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response[len(prompt):]  # Return only generated text
-    
+
     def stream_generate(self, prompt, **kwargs):
         """Stream generation token by token."""
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         streamer = TextStreamer(self.tokenizer, skip_special_tokens=True)
-        
+
         self.model.generate(**inputs, streamer=streamer, **kwargs)
 
 # ❌ BAD - No optimization, recreates model each time
@@ -257,7 +261,7 @@ You are a helpful AI assistant.
 {instruction}
 <|assistant|>
 {response}"""
-    
+
     formatted_texts = []
     for instruction, response in zip(examples["instruction"], examples["response"]):
         formatted_texts.append(
@@ -266,7 +270,7 @@ You are a helpful AI assistant.
                 response=response.strip()
             )
         )
-    
+
     return {"text": formatted_texts}
 
 # Apply to dataset
@@ -276,16 +280,16 @@ dataset = dataset.map(format_instruction_dataset, batched=True, remove_columns=d
 def validate_dataset(dataset, tokenizer, max_length=2048):
     """Check for common issues in training data."""
     issues = []
-    
+
     for idx, example in enumerate(dataset.select(range(min(100, len(dataset))))):
         tokens = tokenizer(example["text"], truncation=False)
-        
+
         if len(tokens["input_ids"]) > max_length:
             issues.append(f"Example {idx}: {len(tokens['input_ids'])} tokens (max: {max_length})")
-        
+
         if not example["text"].strip():
             issues.append(f"Example {idx}: Empty text")
-    
+
     return issues
 ```
 
@@ -299,22 +303,22 @@ from pathlib import Path
 def convert_to_gguf(model_path, output_path, ftype="f16"):
     """Convert Hugging Face model to GGUF format."""
     convert_script = Path("llama.cpp/convert_hf_to_gguf.py")
-    
+
     if not convert_script.exists():
         raise FileNotFoundError("llama.cpp not found. Clone from https://github.com/ggerganov/llama.cpp")
-    
+
     cmd = [
         "python", str(convert_script),
         str(model_path),
         "--outfile", str(output_path),
         "--outtype", ftype
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         raise RuntimeError(f"Conversion failed: {result.stderr}")
-    
+
     print(f"Converted to {output_path}")
     return output_path
 
@@ -327,12 +331,12 @@ def quantize_gguf(input_path, output_path, quant_type="Q4_K_M"):
         str(output_path),
         quant_type
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         raise RuntimeError(f"Quantization failed: {result.stderr}")
-    
+
     # Print size comparison
     input_size = Path(input_path).stat().st_size / (1024**3)
     output_size = Path(output_path).stat().st_size / (1024**3)
@@ -427,33 +431,33 @@ import torch
 def benchmark_inference(model, tokenizer, prompt, num_runs=10):
     """Benchmark inference speed."""
     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
-    
+
     # Warmup
     with torch.inference_mode():
         model.generate(**inputs, max_new_tokens=100)
-    
+
     torch.cuda.synchronize()
-    
+
     times = []
     tokens_generated = []
-    
+
     for _ in range(num_runs):
         start = time.perf_counter()
         with torch.inference_mode():
             outputs = model.generate(**inputs, max_new_tokens=100)
         torch.cuda.synchronize()
         end = time.perf_counter()
-        
+
         times.append(end - start)
         tokens_generated.append(len(outputs[0]))
-    
+
     avg_time = sum(times) / len(times)
     avg_tokens = sum(tokens_generated) / len(tokens_generated)
     tokens_per_sec = avg_tokens / avg_time
-    
+
     print(f"Average time: {avg_time:.3f}s")
     print(f"Tokens/second: {tokens_per_sec:.1f}")
-    
+
     return tokens_per_sec
 ```
 

@@ -1,10 +1,12 @@
 # VS Code Workspace Bootstrap
 
-Automated workspace initialization system for consistent development environments across machines using VS Code Settings Sync.
+Automated workspace initialization system for consistent development environments across machines using VS Code Settings
+Sync.
 
 ## 🎯 Purpose
 
-This repository provides cross-platform workspace initialization scripts that automatically configure new workspaces with:
+This repository provides cross-platform workspace initialization scripts that automatically configure new workspaces
+with:
 
 - ✅ Python virtual environment (`.venv`)
 - ✅ VS Code settings with absolute interpreter paths
@@ -15,13 +17,15 @@ This repository provides cross-platform workspace initialization scripts that au
 - ✅ spec-kit repository clone
 - ✅ Consistent code standards (120 line length, flake8 linting)
 
-**Architecture**: Scripts are kept short (~200 lines) by referencing external template files from the `templates/` directory, ensuring easy maintenance and consistency.
+**Architecture**: Scripts are kept short (~200 lines) by referencing external template files from the `templates/`
+directory, ensuring easy maintenance and consistency.
 
 ## 🚀 Quick Start
 
 ### 1. Add User-Level Task (Syncs Across Machines)
 
-Add the appropriate task to your VS Code `tasks.json` (User level: `File > Preferences > User Tasks` or `%APPDATA%\Code\User\tasks.json`):
+Add the appropriate task to your VS Code `tasks.json` (User level: `File > Preferences > User Tasks` or
+`%APPDATA%\Code\User\tasks.json`):
 
 **Windows (PowerShell):**
 
@@ -94,7 +98,7 @@ Every time you open a workspace folder:
 
 ### Workspace Structure
 
-```
+```text
 your-workspace/
 ├── .vscode/
 │   ├── settings.json       # Absolute interpreter path, linting config
@@ -123,7 +127,7 @@ your-workspace/
 
 ### Repository Structure
 
-```
+```text
 bootstrap/
 ├── create_workspace_scaffold.ps1   # Windows PowerShell script (~200 lines)
 ├── create_workspace_scaffold.sh    # Linux/macOS bash script (~200 lines)
@@ -288,6 +292,7 @@ All project documentation follows the [Diátaxis framework](https://diataxis.fr/
 Documentation is built with [Astro Starlight](https://starlight.astro.build/), a modern documentation framework.
 
 **Working with docs:**
+
 ```bash
 cd docs/
 npm install          # First time only
@@ -296,6 +301,7 @@ npm run build        # Build static site to dist/
 ```
 
 **Adding new pages:**
+
 1. Create markdown file in appropriate Diátaxis category
 2. Add frontmatter with title and description
 3. Update sidebar in `astro.config.mjs` if needed
@@ -363,7 +369,8 @@ Both model-specific files reference the common instructions to maintain consiste
 
 ### GitHub Copilot Agents (`.github/agents/` directory)
 
-**NEW**: Specialized AI agents with full execution permissions for project-specific tasks. The bootstrap script automatically detects your project type and downloads the appropriate agent configuration.
+**NEW**: Specialized AI agents with full execution permissions for project-specific tasks. The bootstrap script
+automatically detects your project type and downloads the appropriate agent configuration.
 
 #### Available Agents
 
@@ -413,7 +420,7 @@ Both model-specific files reference the common instructions to maintain consiste
 
 **In GitHub Copilot Chat:**
 
-```
+```bash
 @ignition_agent create a perspective view for tank level monitoring with alarm indicators
 
 @llm_agent fine-tune Llama-2-7b on my instruction dataset and convert to Q4_K_M GGUF

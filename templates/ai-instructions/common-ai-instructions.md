@@ -47,7 +47,7 @@
 
 ### Common Pitfalls & Solutions
 
-**1. Array/Collection .Count Property Errors**
+#### Array/Collection .Count Property Errors
 
 Problem: `The property 'Count' cannot be found on this object`
 
@@ -64,7 +64,7 @@ if ($result.Count -gt 0) { ... }
 if (@($result).Count -gt 0) { ... }
 ```
 
-**2. Python Launcher Missing**
+#### Python Launcher Missing
 
 Problem: `py: The term 'py' is not recognized`
 
@@ -78,15 +78,15 @@ Problem: `py: The term 'py' is not recognized`
 py -3 -m venv .venv
 
 # ✅ CORRECT - tries multiple commands
-try { 
-    py -3 -m venv .venv 
-} catch { 
-    try { 
-        python3 -m venv .venv 
-    } catch { 
-        try { 
-            python -m venv .venv 
-        } catch { 
+try {
+    py -3 -m venv .venv
+} catch {
+    try {
+        python3 -m venv .venv
+    } catch {
+        try {
+            python -m venv .venv
+        } catch {
             Write-Error "Python not found; install from python.org"
             exit 1
         }
@@ -94,7 +94,7 @@ try {
 }
 ```
 
-**3. Here-String Indentation**
+#### Here-String Indentation
 
 Problem: `White space is not allowed before the string terminator`
 
@@ -123,7 +123,7 @@ function Get-Json {
 }
 ```
 
-**4. Variable Interpolation in Strings**
+#### Variable Interpolation in Strings
 
 Problem: `$variable: $_` fails to parse
 
@@ -140,7 +140,7 @@ Problem: `$variable: $_` fails to parse
 "${template}: $_"
 ```
 
-**5. Nested Shell Invocation**
+#### Nested Shell Invocation
 
 Problem: `ScriptBlock should only be specified as a value of the Command parameter`
 
@@ -164,15 +164,15 @@ Problem: `ScriptBlock should only be specified as a value of the Command paramet
 
 ```powershell
 # PowerShell 5.x doesn't have $IsWindows/$IsLinux/$IsMacOS
-if (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue)) { 
-    $IsWindows = ($env:OS -eq 'Windows_NT') 
+if (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue)) {
+    $IsWindows = ($env:OS -eq 'Windows_NT')
 }
-if (-not (Get-Variable -Name IsLinux -ErrorAction SilentlyContinue)) { 
-    $IsLinux = (-not $IsWindows) -and (Test-Path '/etc/os-release') 
+if (-not (Get-Variable -Name IsLinux -ErrorAction SilentlyContinue)) {
+    $IsLinux = (-not $IsWindows) -and (Test-Path '/etc/os-release')
 }
-if (-not (Get-Variable -Name IsMacOS -ErrorAction SilentlyContinue)) { 
+if (-not (Get-Variable -Name IsMacOS -ErrorAction SilentlyContinue)) {
     try { $uname = (uname) 2>$null } catch { $uname = '' }
-    $IsMacOS = (-not $IsWindows) -and (-not $IsLinux) -and ($uname -eq 'Darwin') 
+    $IsMacOS = (-not $IsWindows) -and (-not $IsLinux) -and ($uname -eq 'Darwin')
 }
 ```
 
@@ -186,16 +186,17 @@ $venvPython = Join-Path $workspaceRoot '.venv\Scripts\python.exe'
 $venvPython = Join-Path $workspaceRoot '.venv/bin/python'
 
 # Combined
-if ($IsWindows) { 
-    $venvPython = Join-Path $workspaceRoot '.venv\Scripts\python.exe' 
-} else { 
-    $venvPython = Join-Path $workspaceRoot '.venv/bin/python' 
+if ($IsWindows) {
+    $venvPython = Join-Path $workspaceRoot '.venv\Scripts\python.exe'
+} else {
+    $venvPython = Join-Path $workspaceRoot '.venv/bin/python'
 }
 ```
 
 ### Testing PowerShell Scripts
 
 Always test with:
+
 - `pwsh -NoProfile -File script.ps1` - Ensures clean environment
 - `-WhatIf` parameter for destructive operations
 - `Set-StrictMode -Version Latest` catches common errors
@@ -234,16 +235,19 @@ When working with AI/Agent development, leverage these tools:
 All project documentation follows the [Diátaxis framework](https://diataxis.fr/) with four distinct content types:
 
 - **Tutorials**: Learning-oriented lessons for beginners
+
   - Location: `docs/src/content/docs/tutorials/`
   - Purpose: Help users learn by doing
   - Format: Step-by-step instructions with expected outcomes
 
 - **How-To Guides**: Task-oriented practical steps
+
   - Location: `docs/src/content/docs/guides/`
   - Purpose: Solve specific problems
   - Format: Goal-focused recipes and examples
 
 - **Reference**: Information-oriented technical descriptions
+
   - Location: `docs/src/content/docs/reference/`
   - Purpose: Describe the machinery
   - Format: API docs, configuration options, specifications
@@ -264,14 +268,17 @@ All project documentation follows the [Diátaxis framework](https://diataxis.fr/
 ### Documentation Creation
 
 When creating documentation:
+
 1. **Identify content type** - Tutorial, Guide, Reference, or Explanation
 2. **Place in correct directory** - Follow Diátaxis structure
 3. **Use Starlight frontmatter**:
+
    ```markdown
    ---
    title: Page Title
    description: Brief description for SEO
    ---
    ```
+
 4. **Include navigation** - Update sidebar in `astro.config.mjs` if needed
 5. **Test locally** - Run dev server before committing
