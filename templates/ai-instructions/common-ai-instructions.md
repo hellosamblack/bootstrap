@@ -226,7 +226,7 @@ When working with AI/Agent development, leverage these tools:
 - **spec-kit**: Automatically cloned to workspace root
 - **copilot CLI**: Launched in spec-kit directory if available
 - **Dev Packages**: pytest, flake8 installed automatically on first bootstrap
-- **docs/**: Astro Starlight documentation site using Diátaxis framework
+- **docs/**: Docusaurus documentation site with Typesense search using Diátaxis framework
 
 ## Documentation Standards
 
@@ -236,33 +236,60 @@ All project documentation follows the [Diátaxis framework](https://diataxis.fr/
 
 - **Tutorials**: Learning-oriented lessons for beginners
 
-  - Location: `docs/src/content/docs/tutorials/`
+  - Location: `docs/docs/tutorials/`
   - Purpose: Help users learn by doing
   - Format: Step-by-step instructions with expected outcomes
 
 - **How-To Guides**: Task-oriented practical steps
 
-  - Location: `docs/src/content/docs/guides/`
+  - Location: `docs/docs/guides/`
   - Purpose: Solve specific problems
   - Format: Goal-focused recipes and examples
 
 - **Reference**: Information-oriented technical descriptions
 
-  - Location: `docs/src/content/docs/reference/`
+  - Location: `docs/docs/reference/`
   - Purpose: Describe the machinery
   - Format: API docs, configuration options, specifications
 
 - **Explanation**: Understanding-oriented discussions
-  - Location: `docs/src/content/docs/explanation/`
+  - Location: `docs/docs/explanation/`
   - Purpose: Clarify and illuminate topics
   - Format: Background, context, design decisions
 
-### Astro Starlight
+### Docusaurus with Typesense (Default)
+
+- **Framework**: [Docusaurus](https://docusaurus.io/) - Modern documentation site generator
+- **Search**: [Typesense](https://typesense.org/) - Instant search with typo tolerance
+- **Structure**: Markdown files in `docs/docs/`
+- **Configuration**: `docs/docusaurus.config.js` and `docs/sidebars.js`
+- **Development**: `npm start` in docs/ directory (`http://localhost:3000`)
+- **Build**: `npm run build` creates static site in `docs/build/`
+
+#### Typesense Search Configuration
+
+```javascript
+// In docusaurus.config.js
+// Note: Store API keys in environment variables, never in source code
+themes: ['docusaurus-theme-search-typesense'],
+themeConfig: {
+  typesense: {
+    typesenseCollectionName: 'docs',
+    typesenseServerConfig: {
+      nodes: [{ host: 'typesense.example.com', port: 443, protocol: 'https' }],
+      apiKey: process.env.TYPESENSE_SEARCH_API_KEY,  // Read-only search key
+    },
+    contextualSearch: true,
+  },
+},
+```
+
+### Astro Starlight (Alternative)
 
 - **Framework**: [Astro Starlight](https://starlight.astro.build/) - Documentation site generator
 - **Structure**: Markdown files in `docs/src/content/docs/`
 - **Configuration**: `docs/astro.config.mjs` and `docs/src/starlight.config.ts`
-- **Development**: `npm run dev` in docs/ directory
+- **Development**: `npm run dev` in docs/ directory (`http://localhost:4321`)
 - **Build**: `npm run build` creates static site in `docs/dist/`
 
 ### Documentation Creation
@@ -271,7 +298,19 @@ When creating documentation:
 
 1. **Identify content type** - Tutorial, Guide, Reference, or Explanation
 2. **Place in correct directory** - Follow Diátaxis structure
-3. **Use Starlight frontmatter**:
+3. **Use appropriate frontmatter**:
+
+   **Docusaurus (default):**
+
+   ```markdown
+   ---
+   title: Page Title
+   description: Brief description for SEO
+   sidebar_position: 1
+   ---
+   ```
+
+   **Astro Starlight (alternative):**
 
    ```markdown
    ---
@@ -280,5 +319,5 @@ When creating documentation:
    ---
    ```
 
-4. **Include navigation** - Update sidebar in `astro.config.mjs` if needed
+4. **Include navigation** - Update `sidebars.js` (Docusaurus) or `astro.config.mjs` (Starlight) if needed
 5. **Test locally** - Run dev server before committing

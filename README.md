@@ -118,13 +118,18 @@ your-workspace/
 ├── .github/
 │   └── agents/             # GitHub Copilot agents (project-specific)
 │       └── [agent].md      # Auto-detected based on project type
-├── docs/                   # Astro Starlight documentation site
-│   ├── src/content/docs/
+├── docs/                   # Docusaurus documentation site (default)
+│   ├── docs/               # Documentation markdown files
 │   │   ├── tutorials/      # Learning-oriented lessons
 │   │   ├── guides/         # Task-oriented how-tos
 │   │   ├── reference/      # Information-oriented specs
 │   │   └── explanation/    # Understanding-oriented discussions
-│   ├── astro.config.mjs
+│   ├── src/
+│   │   ├── css/
+│   │   └── pages/
+│   ├── static/
+│   ├── docusaurus.config.js
+│   ├── sidebars.js
 │   └── package.json
 ├── spec-kit/               # Cloned github/spec-kit repository
 └── requirements.txt        # (if exists) Installed with torch handling
@@ -281,22 +286,50 @@ curl -fsSL https://raw.githubusercontent.com/hellosamblack/bootstrap/main/create
 
 Script automatically detects platform and adjusts paths/commands.
 
-## � Documentation
+## 📚 Documentation
 
 ### Diátaxis Framework
 
 All project documentation follows the [Diátaxis framework](https://diataxis.fr/) for clear, effective technical writing:
 
-- **Tutorials** (`docs/src/content/docs/tutorials/`) - Step-by-step learning lessons
-- **How-To Guides** (`docs/src/content/docs/guides/`) - Problem-solving recipes
-- **Reference** (`docs/src/content/docs/reference/`) - Technical specifications and API docs
-- **Explanation** (`docs/src/content/docs/explanation/`) - Background and design decisions
+- **Tutorials** (`docs/docs/tutorials/`) - Step-by-step learning lessons
+- **How-To Guides** (`docs/docs/guides/`) - Problem-solving recipes
+- **Reference** (`docs/docs/reference/`) - Technical specifications and API docs
+- **Explanation** (`docs/docs/explanation/`) - Background and design decisions
 
-### Astro Starlight
+### Docusaurus with Typesense (Default)
 
-Documentation is built with [Astro Starlight](https://starlight.astro.build/), a modern documentation framework.
+Documentation is built with [Docusaurus](https://docusaurus.io/), a modern documentation framework with instant [Typesense](https://typesense.org/) search integration.
 
 **Working with docs:**
+
+```bash
+cd docs/
+npm install                  # First time only
+npm start                    # Start dev server (http://localhost:3000)
+npm run build                # Build static site to build/
+npm run serve                # Preview production build
+```
+
+**Adding new pages:**
+
+1. Create markdown file in appropriate Diátaxis category under `docs/docs/`
+2. Add frontmatter with title, description, and sidebar_position
+3. Update sidebar in `sidebars.js` if needed
+
+**Typesense search:**
+
+- Install plugin: `npm install docusaurus-theme-search-typesense`
+- Configure in `docusaurus.config.js` with Typesense server details
+- Build search index using typesense-docsearch-scraper
+
+### Astro Starlight (Alternative)
+
+As an alternative, [Astro Starlight](https://starlight.astro.build/) can be used for documentation.
+
+**Starlight structure:** `docs/src/content/docs/` (instead of `docs/docs/`)
+
+**Working with Starlight docs:**
 
 ```bash
 cd docs/
@@ -305,13 +338,7 @@ npm run dev          # Start dev server (http://localhost:4321)
 npm run build        # Build static site to dist/
 ```
 
-**Adding new pages:**
-
-1. Create markdown file in appropriate Diátaxis category
-2. Add frontmatter with title and description
-3. Update sidebar in `astro.config.mjs` if needed
-
-## �🐛 Troubleshooting
+## 🐛 Troubleshooting
 
 ### Script Doesn't Run on Folder Open
 

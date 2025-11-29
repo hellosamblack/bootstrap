@@ -244,28 +244,279 @@ if [ -x "$venv_python" ] && [ ! -f "$bootstrap_sentinel" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Astro Starlight documentation site
+# 5. Docusaurus documentation site with Typesense search (default)
 # ---------------------------------------------------------------------------
 docs_dir="$workspace_root/docs"
 if [ ! -d "$docs_dir" ]; then
     if command -v npm >/dev/null 2>&1; then
-        scaffold_info "Creating Astro Starlight documentation site"
+        scaffold_info "Creating Docusaurus documentation site with Typesense search"
         (
             cd "$workspace_root" || exit 1
-            npm create astro@latest docs -- --template starlight --install --no-git --typescript strict || scaffold_error "Failed to create documentation site"
+            npx create-docusaurus@latest docs classic --typescript
+            if [ $? -ne 0 ]; then
+                scaffold_error "Failed to create Docusaurus site"
+                exit 1
+            fi
+            
+            cd "$docs_dir" || exit 1
+            
+            # Install Typesense search plugin
+            scaffold_info "Installing Typesense search plugin"
+            npm install docusaurus-theme-search-typesense || scaffold_info "Typesense plugin install failed; continuing without search"
             
             # Create Diátaxis directory structure
-            content_dir="$docs_dir/src/content/docs"
+            content_dir="$docs_dir/docs"
             mkdir -p "$content_dir/tutorials"
             mkdir -p "$content_dir/guides"
             mkdir -p "$content_dir/reference"
             mkdir -p "$content_dir/explanation"
             
-            scaffold_info "Documentation site created with Diátaxis structure"
+            # Get project name for config
+            project_name=$(basename "$workspace_root")
+            
+            # Create docusaurus.config.ts with Typesense
+            cat > "$docs_dir/docusaurus.config.ts" << DOCUSAURUS_CONFIG_EOF
+import {themes as prismThemes} from 'prism-react-renderer';
+import type {Config} from '@docusaurus/types';
+import type * as Preset from '@docusaurus/preset-classic';
+
+const config: Config = {
+  title: '${project_name} Docs',
+  tagline: 'Documentation for ${project_name}',
+  favicon: 'img/favicon.ico',
+  url: 'https://your-docusaurus-site.example.com',
+  baseUrl: '/',
+  organizationName: 'hellosamblack',
+  projectName: '${project_name}',
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en'],
+  },
+  presets: [
+    [
+      'classic',
+      {
+        docs: {
+          sidebarPath: './sidebars.ts',
+          editUrl: 'https://github.com/hellosamblack/${project_name}/tree/main/docs/',
+        },
+        blog: {
+          showReadingTime: true,
+          feedOptions: {
+            type: ['rss', 'atom'],
+            xslt: true,
+          },
+          editUrl: 'https://github.com/hellosamblack/${project_name}/tree/main/docs/',
+        },
+        theme: {
+          customCss: './src/css/custom.css',
+        },
+      } satisfies Preset.Options,
+    ],
+  ],
+  themes: [
+    [
+      require.resolve('docusaurus-theme-search-typesense'),
+      {
+        typesenseCollectionName: 'docs',
+        typesenseServerConfig: {
+          nodes: [
+            {
+              host: 'localhost',
+              port: 8108,
+              protocol: 'http',
+            },
+          ],
+          apiKey: process.env.TYPESENSE_API_KEY || 'xyz', // IMPORTANT: Set TYPESENSE_API_KEY environment variable
+        },
+        typesenseSearchParameters: {},
+        contextualSearch: true,
+      },
+    ],
+  ],
+  themeConfig: {
+    image: 'img/docusaurus-social-card.jpg',
+    navbar: {
+      title: '${project_name}',
+      logo: {
+        alt: '${project_name} Logo',
+        src: 'img/logo.svg',
+      },
+      items: [
+        {to: '/docs/tutorials/getting-started', label: 'Tutorials', position: 'left'},
+        {to: '/docs/guides/overview', label: 'Guides', position: 'left'},
+        {to: '/docs/reference/index', label: 'Reference', position: 'left'},
+        {to: '/docs/explanation/concepts', label: 'Explanation', position: 'left'},
+        {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          href: 'https://github.com/hellosamblack/${project_name}',
+          label: 'GitHub',
+          position: 'right',
+        },
+      ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: 'Docs',
+          items: [
+            {label: 'Tutorials', to: '/docs/tutorials/getting-started'},
+            {label: 'Guides', to: '/docs/guides/overview'},
+            {label: 'Reference', to: '/docs/reference/index'},
+            {label: 'Explanation', to: '/docs/explanation/concepts'},
+          ],
+        },
+      ],
+      copyright: 'Built with Docusaurus.',
+    },
+    prism: {
+      theme: prismThemes.github,
+      darkTheme: prismThemes.dracula,
+    },
+  } satisfies Preset.ThemeConfig,
+};
+
+export default config;
+DOCUSAURUS_CONFIG_EOF
+
+            # Create sidebars.ts with Diátaxis structure
+            cat > "$docs_dir/sidebars.ts" << 'SIDEBARS_EOF'
+import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+
+const sidebars: SidebarsConfig = {
+  tutorialsSidebar: [
+    {
+      type: 'autogenerated',
+      dirName: 'tutorials',
+    },
+  ],
+  guidesSidebar: [
+    {
+      type: 'autogenerated',
+      dirName: 'guides',
+    },
+  ],
+  referenceSidebar: [
+    {
+      type: 'autogenerated',
+      dirName: 'reference',
+    },
+  ],
+  explanationSidebar: [
+    {
+      type: 'autogenerated',
+      dirName: 'explanation',
+    },
+  ],
+};
+
+export default sidebars;
+SIDEBARS_EOF
+
+            # Create seed pages for each Diátaxis category
+            cat > "$content_dir/tutorials/getting-started.md" << 'TUTORIAL_EOF'
+---
+sidebar_position: 1
+title: Getting Started
+description: Quick start tutorial.
+---
+
+# Getting Started
+
+Welcome! This tutorial walks you through the essentials.
+
+1. Installation
+2. Configuration
+3. First deployment
+
+Next: edit this page to tailor steps to your project.
+TUTORIAL_EOF
+
+            cat > "$content_dir/guides/overview.md" << 'GUIDE_EOF'
+---
+sidebar_position: 1
+title: Project Overview Guide
+description: High-level guide.
+---
+
+# Project Overview Guide
+
+This guide provides a structured path for common tasks.
+
+## Sections
+
+- Environment setup
+- Development workflow
+- Testing & quality
+- Deployment procedures
+GUIDE_EOF
+
+            cat > "$content_dir/reference/index.md" << 'REFERENCE_EOF'
+---
+sidebar_position: 1
+title: API Reference Index
+description: Entry point for reference material.
+---
+
+# API Reference Index
+
+Reference pages document precise interfaces, commands, and configuration options.
+Add files under `reference/` to expand this index automatically.
+REFERENCE_EOF
+
+            cat > "$content_dir/explanation/concepts.md" << 'EXPLANATION_EOF'
+---
+sidebar_position: 1
+title: Core Concepts
+description: Deeper conceptual explanations.
+---
+
+# Core Concepts
+
+Use explanation pages for reasoning, design decisions, and architecture notes.
+EXPLANATION_EOF
+
+            # Create intro.md as landing page
+            cat > "$content_dir/intro.md" << 'INTRO_EOF'
+---
+sidebar_position: 1
+slug: /
+title: Welcome
+---
+
+# Welcome to the Documentation
+
+This documentation follows the [Diátaxis framework](https://diataxis.fr/) for clear, effective technical writing.
+
+## Documentation Structure
+
+- **[Tutorials](/docs/tutorials/getting-started)** - Learning-oriented lessons for beginners
+- **[Guides](/docs/guides/overview)** - Task-oriented practical steps
+- **[Reference](/docs/reference/index)** - Information-oriented technical descriptions
+- **[Explanation](/docs/explanation/concepts)** - Understanding-oriented discussions
+
+## Quick Links
+
+- [Getting Started Tutorial](/docs/tutorials/getting-started)
+- [Project Overview Guide](/docs/guides/overview)
+- [API Reference](/docs/reference/index)
+- [Core Concepts](/docs/explanation/concepts)
+
+---
+
+*This landing page was auto-generated; customize it anytime.*
+INTRO_EOF
+
+            scaffold_info "Documentation site created with Diátaxis structure and Typesense search"
         )
     else
         scaffold_info "npm not found; skipping documentation site creation"
     fi
+else
+    scaffold_info "Documentation site already exists; skipping."
 fi
 
 # ---------------------------------------------------------------------------
