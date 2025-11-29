@@ -252,7 +252,11 @@ if [ ! -d "$docs_dir" ]; then
         scaffold_info "Creating Docusaurus documentation site with Typesense search"
         (
             cd "$workspace_root" || exit 1
-            npx create-docusaurus@latest docs classic --typescript || scaffold_error "Failed to create documentation site"
+            npx create-docusaurus@latest docs classic --typescript
+            if [ $? -ne 0 ]; then
+                scaffold_error "Failed to create Docusaurus site"
+                exit 1
+            fi
             
             cd "$docs_dir" || exit 1
             
@@ -325,7 +329,7 @@ const config: Config = {
               protocol: 'http',
             },
           ],
-          apiKey: 'xyz', // Replace with your Typesense API key
+          apiKey: process.env.TYPESENSE_API_KEY || 'xyz', // IMPORTANT: Set TYPESENSE_API_KEY environment variable
         },
         typesenseSearchParameters: {},
         contextualSearch: true,
@@ -366,7 +370,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: \\\`Copyright © \\\${new Date().getFullYear()} ${project_name}. Built with Docusaurus.\\\`,
+      copyright: 'Built with Docusaurus.',
     },
     prism: {
       theme: prismThemes.github,

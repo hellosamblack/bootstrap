@@ -539,7 +539,7 @@ const config: Config = {
               protocol: 'http',
             },
           ],
-          apiKey: 'xyz', // Placeholder - use read-only search API key in production
+          apiKey: process.env.TYPESENSE_API_KEY || 'xyz', // IMPORTANT: Set TYPESENSE_API_KEY environment variable
         },
       },
     ],
