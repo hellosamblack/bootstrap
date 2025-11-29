@@ -149,7 +149,7 @@ else {
     Write-Host '  2) AI instruction files (.ai)'
     Write-Host '  3) Agent templates (.github/agents)'
     Write-Host '  4) Python dependencies (venv packages)'
-    Write-Host '  5) Documentation site (Astro Starlight)'
+    Write-Host '  5) Documentation site (Docusaurus + Typesense, default)'
     Write-Host '  6) spec-kit repository clone'
     Write-Host '  7) Launch copilot CLI (requires spec-kit)'
     Write-Host -NoNewline 'Enter selection: '
@@ -461,151 +461,372 @@ if ($selectedFeatures -contains 'python') {
 else { Write-ScaffoldInfo 'Skipping Python dependency feature.' }
 
 # ---------------------------------------------------------------------------
-# 5. Astro Starlight documentation site
+# 5. Docusaurus + Typesense documentation site (default)
 # ---------------------------------------------------------------------------
 if ($selectedFeatures -contains 'docs') {
     if (-not (Test-Path $docsDir)) {
         if (Get-Command npm -ErrorAction SilentlyContinue) {
-            Write-ScaffoldInfo 'Creating Astro Starlight documentation site'
+            Write-ScaffoldInfo 'Creating Docusaurus documentation site with Typesense search'
             try {
                 Push-Location $workspaceRoot
-                & npm create astro@latest docs -- --template starlight --install --no-git --typescript strict
-                $contentDir = Join-Path $docsDir 'src\content\docs'
-                New-DirectoryIfMissing (Join-Path $contentDir 'tutorials')
-                New-DirectoryIfMissing (Join-Path $contentDir 'guides')
-                New-DirectoryIfMissing (Join-Path $contentDir 'reference')
-                New-DirectoryIfMissing (Join-Path $contentDir 'explanation')
-                Write-ScaffoldInfo 'Documentation site created with Diátaxis structure'
+                & npx create-docusaurus@latest docs classic --typescript
+                if ($LASTEXITCODE -ne 0) {
+                    throw "npx create-docusaurus failed with exit code $LASTEXITCODE"
+                }
                 Pop-Location
+                # Install Typesense search plugin
+                Push-Location $docsDir
+                Write-ScaffoldInfo 'Installing Typesense search plugin'
+                & npm install docusaurus-theme-search-typesense
+                if ($LASTEXITCODE -ne 0) {
+                    Write-ScaffoldError 'Failed to install Typesense search plugin'
+                }
+                Pop-Location
+                # Create Diátaxis directory structure
+                $docsContentDir = Join-Path $docsDir 'docs'
+                New-DirectoryIfMissing (Join-Path $docsContentDir 'tutorials')
+                New-DirectoryIfMissing (Join-Path $docsContentDir 'guides')
+                New-DirectoryIfMissing (Join-Path $docsContentDir 'reference')
+                New-DirectoryIfMissing (Join-Path $docsContentDir 'explanation')
+                Write-ScaffoldInfo 'Documentation site created with Diátaxis structure'
             }
             catch { Write-ScaffoldError "Failed to create documentation site: $_"; Pop-Location }
         }
         else { Write-ScaffoldInfo 'npm not found; skipping documentation site creation' }
     }
     else { Write-ScaffoldInfo 'Documentation site already exists; skipping.' }
-    # Enhance Starlight configuration & Diátaxis placeholders
-    $astroConfigPath = Join-Path $docsDir 'astro.config.mjs'
-    if (Test-Path $astroConfigPath) {
-        $cfgRaw = Get-Content $astroConfigPath -Raw
-        if ($cfgRaw -match "title: 'My Docs'") {
-            $projectName = Split-Path -Leaf $workspaceRoot
-            $enhancedCfg = @"
-// @ts-check
-import { defineConfig } from 'astro/config';
-import starlight from '@astrojs/starlight';
 
-export default defineConfig({
-  integrations: [
-    starlight({
-      title: '${projectName} Docs',
-      sidebar: [
-        { label: 'Tutorials', autogenerate: { directory: 'tutorials' } },
-        { label: 'Guides', autogenerate: { directory: 'guides' } },
-        { label: 'Reference', autogenerate: { directory: 'reference' } },
-        { label: 'Explanation', autogenerate: { directory: 'explanation' } },
-      ],
-      social: [
-        { icon: 'github', label: 'GitHub', href: 'https://github.com/hellosamblack' }
-      ],
-      head: [
+    # Configure Docusaurus with Typesense
+    $docusaurusConfigPath = Join-Path $docsDir 'docusaurus.config.ts'
+    $projectName = Split-Path -Leaf $workspaceRoot
+    if (Test-Path $docusaurusConfigPath) {
+        $cfgRaw = Get-Content $docusaurusConfigPath -Raw
+        if ($cfgRaw -match "title: 'My Site'") {
+            $enhancedCfg = @"
+import {themes as prismThemes} from 'prism-react-renderer';
+import type {Config} from '@docusaurus/types';
+import type * as Preset from '@docusaurus/preset-classic';
+
+const config: Config = {
+  title: '${projectName} Docs',
+  tagline: '${projectName} Knowledge Base',
+  favicon: 'img/favicon.ico',
+
+  url: 'https://your-docusaurus-site.example.com',
+  baseUrl: '/',
+
+  organizationName: 'hellosamblack',
+  projectName: '${projectName}',
+
+  onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
+
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en'],
+  },
+
+  themes: [
+    [
+      require.resolve('docusaurus-theme-search-typesense'),
+      {
+        typesenseCollectionName: 'docs',
+        typesenseServerConfig: {
+          nodes: [
+            {
+              host: 'localhost',
+              port: 8108,
+              protocol: 'http',
+            },
+          ],
+          apiKey: 'xyz', // Placeholder - use read-only search API key in production
+        },
+      },
+    ],
+  ],
+
+  presets: [
+    [
+      'classic',
+      {
+        docs: {
+          sidebarPath: './sidebars.ts',
+          editUrl: 'https://github.com/hellosamblack/${projectName}/tree/main/docs/',
+        },
+        blog: {
+          showReadingTime: true,
+          feedOptions: {
+            type: ['rss', 'atom'],
+            xslt: true,
+          },
+          editUrl: 'https://github.com/hellosamblack/${projectName}/tree/main/docs/',
+        },
+        theme: {
+          customCss: './src/css/custom.css',
+        },
+      } satisfies Preset.Options,
+    ],
+  ],
+
+  themeConfig: {
+    navbar: {
+      title: '${projectName}',
+      logo: {
+        alt: '${projectName} Logo',
+        src: 'img/logo.svg',
+      },
+      items: [
         {
-          tag: 'script',
-          attrs: { type: 'module' },
-          content: "const mq=window.matchMedia('(prefers-color-scheme: dark)');function apply(){document.documentElement.dataset.theme=mq.matches?'dark':'light';}apply();mq.addEventListener('change',apply);"
-        }
-      ]
-    })
-  ]
-});
+          type: 'docSidebar',
+          sidebarId: 'tutorialsSidebar',
+          position: 'left',
+          label: 'Tutorials',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'guidesSidebar',
+          position: 'left',
+          label: 'Guides',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'referenceSidebar',
+          position: 'left',
+          label: 'Reference',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'explanationSidebar',
+          position: 'left',
+          label: 'Explanation',
+        },
+        {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          href: 'https://github.com/hellosamblack/${projectName}',
+          label: 'GitHub',
+          position: 'right',
+        },
+      ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: 'Docs',
+          items: [
+            {
+              label: 'Tutorials',
+              to: '/docs/tutorials/getting-started',
+            },
+            {
+              label: 'Guides',
+              to: '/docs/guides/overview',
+            },
+          ],
+        },
+        {
+          title: 'More',
+          items: [
+            {
+              label: 'Blog',
+              to: '/blog',
+            },
+            {
+              label: 'GitHub',
+              href: 'https://github.com/hellosamblack/${projectName}',
+            },
+          ],
+        },
+      ],
+      copyright: 'Built with Docusaurus.',
+    },
+    prism: {
+      theme: prismThemes.github,
+      darkTheme: prismThemes.dracula,
+    },
+  } satisfies Preset.ThemeConfig,
+};
+
+export default config;
 "@
-            Set-Content -Path $astroConfigPath -Value $enhancedCfg -Encoding UTF8
-            Write-ScaffoldInfo 'astro.config.mjs enhanced with Diátaxis sidebar & system theme auto.'
+            Set-Content -Path $docusaurusConfigPath -Value $enhancedCfg -Encoding UTF8
+            Write-ScaffoldInfo 'docusaurus.config.ts enhanced with Diátaxis nav & Typesense search.'
         }
     }
-    # Seed pages
-    $contentDir = Join-Path $docsDir 'src\content\docs'
+
+    # Create sidebars.ts with Diátaxis categories
+    $sidebarsPath = Join-Path $docsDir 'sidebars.ts'
+    if (Test-Path $sidebarsPath) {
+        $sidebarsContent = @"
+import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+
+const sidebars: SidebarsConfig = {
+  tutorialsSidebar: [
+    {
+      type: 'category',
+      label: 'Tutorials',
+      items: [{type: 'autogenerated', dirName: 'tutorials'}],
+    },
+  ],
+  guidesSidebar: [
+    {
+      type: 'category',
+      label: 'Guides',
+      items: [{type: 'autogenerated', dirName: 'guides'}],
+    },
+  ],
+  referenceSidebar: [
+    {
+      type: 'category',
+      label: 'Reference',
+      items: [{type: 'autogenerated', dirName: 'reference'}],
+    },
+  ],
+  explanationSidebar: [
+    {
+      type: 'category',
+      label: 'Explanation',
+      items: [{type: 'autogenerated', dirName: 'explanation'}],
+    },
+  ],
+};
+
+export default sidebars;
+"@
+        Set-Content -Path $sidebarsPath -Value $sidebarsContent -Encoding UTF8
+        Write-ScaffoldInfo 'sidebars.ts created with Diátaxis categories.'
+    }
+
+    # Seed pages for Diátaxis structure
+    $docsContentDir = Join-Path $docsDir 'docs'
     $seedPages = @{
-        (Join-Path $contentDir 'tutorials\getting-started.md') = @"
+        (Join-Path $docsContentDir 'tutorials\getting-started.md') = @"
 ---
+sidebar_position: 1
 title: Getting Started
 description: Quick start tutorial.
 ---
 
-Welcome! This tutorial walks you through the essentials.
-1. Installation
-2. Configuration
-3. First deployment
+# Getting Started
 
-Next: edit this page to tailor steps to your project.
+Welcome! This tutorial walks you through the essentials.
+
+## Prerequisites
+
+- Node.js 18 or higher
+- npm or yarn
+
+## Steps
+
+1. **Installation** - Set up your development environment
+2. **Configuration** - Configure the project settings
+3. **First deployment** - Deploy your first version
+
+## Next Steps
+
+Edit this page to tailor steps to your project.
 "@
-        (Join-Path $contentDir 'guides\overview.md')           = @"
+        (Join-Path $docsContentDir 'guides\overview.md') = @"
 ---
+sidebar_position: 1
 title: Project Overview Guide
 description: High-level guide.
 ---
 
+# Project Overview Guide
+
 This guide provides a structured path for common tasks.
 
-Sections:
-- Environment setup
-- Development workflow
-- Testing & quality
-- Deployment procedures
+## Sections
+
+- **Environment setup** - Configure your local development environment
+- **Development workflow** - Day-to-day development practices
+- **Testing & quality** - Ensure code quality and test coverage
+- **Deployment procedures** - Release and deployment guidelines
 "@
-        (Join-Path $contentDir 'reference\index.md')           = @"
+        (Join-Path $docsContentDir 'reference\index.md') = @"
 ---
+sidebar_position: 1
 title: API Reference Index
 description: Entry point for reference material.
 ---
 
+# API Reference
+
 Reference pages document precise interfaces, commands, and configuration options.
-Add files under 'reference/' to expand this index automatically.
+
+Add files under `reference/` to expand this index automatically.
+
+## Available References
+
+- Configuration options
+- CLI commands
+- API endpoints
 "@
-        (Join-Path $contentDir 'explanation\concepts.md')      = @"
+        (Join-Path $docsContentDir 'explanation\concepts.md') = @"
 ---
+sidebar_position: 1
 title: Core Concepts
 description: Deeper conceptual explanations.
 ---
 
+# Core Concepts
+
 Use explanation pages for reasoning, design decisions, and architecture notes.
+
+## Topics
+
+- **Architecture decisions** - Why we chose this approach
+- **Design patterns** - Patterns used throughout the codebase
+- **Trade-offs** - Understanding the compromises made
 "@
     }
     foreach ($p in $seedPages.Keys) {
+        $parentDir = Split-Path -Parent $p
+        if (-not (Test-Path $parentDir)) { New-DirectoryIfMissing $parentDir }
         if (-not (Test-Path $p)) { Set-Content -Path $p -Value $seedPages[$p] -Encoding UTF8 }
     }
 
-    # Replace landing page if still default
-    $landing = Join-Path $contentDir 'index.mdx'
-    if (Test-Path $landing) {
-        $landingRaw = Get-Content $landing -Raw
-        if ($landingRaw -match 'Welcome to Starlight') {
-            $newLanding = @"
+    # Create intro.md as docs landing page
+    $introPath = Join-Path $docsContentDir 'intro.md'
+    if (Test-Path $introPath) {
+        $introRaw = Get-Content $introPath -Raw
+        if ($introRaw -match 'Tutorial Intro') {
+            $newIntro = @"
 ---
+sidebar_position: 1
+slug: /
 title: Welcome
 description: Entry point for the ${projectName} documentation.
-hero:
-  tagline: ${projectName} Knowledge Base
-  actions:
-    - text: Getting Started Tutorial
-      link: /tutorials/getting-started/
-      icon: right-arrow
-    - text: Guides Overview
-      link: /guides/overview/
-      icon: document
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components'
+# Welcome to ${projectName}
 
-<CardGrid stagger>
-  <Card title="Tutorials" icon="pencil">Step-by-step instructions for accomplishing tasks.</Card>
-  <Card title="Guides" icon="setting">Opinionated paths through common workflows.</Card>
-  <Card title="Reference" icon="open-book">Authoritative source for APIs and configuration.</Card>
-  <Card title="Explanation" icon="document">Concepts, architecture decisions, and rationale.</Card>
-</CardGrid>
+Welcome to the ${projectName} Knowledge Base.
+
+## Documentation Structure
+
+This documentation follows the [Diátaxis](https://diataxis.fr/) framework:
+
+| Category | Purpose |
+|----------|---------|
+| **[Tutorials](/docs/tutorials/getting-started)** | Step-by-step learning experiences |
+| **[Guides](/docs/guides/overview)** | Goal-oriented how-to guides |
+| **[Reference](/docs/reference/)** | Technical descriptions and specifications |
+| **[Explanation](/docs/explanation/concepts)** | Understanding-oriented discussion |
+
+## Quick Links
+
+- 🚀 [Getting Started Tutorial](/docs/tutorials/getting-started)
+- 📖 [Guides Overview](/docs/guides/overview)
+- 📚 [API Reference](/docs/reference/)
+- 💡 [Core Concepts](/docs/explanation/concepts)
+
+---
 
 _This landing page was auto-generated; customize it anytime._
 "@
-            Set-Content -Path $landing -Value $newLanding -Encoding UTF8
+            Set-Content -Path $introPath -Value $newIntro -Encoding UTF8
             Write-ScaffoldInfo 'Landing page replaced with Diátaxis overview.'
         }
     }
@@ -620,11 +841,11 @@ _This landing page was auto-generated; customize it anytime._
 .PARAMETER SourceDir
     Root directory to scan for source files (default: ../src or ..).
 .PARAMETER OutputDir
-    Where to write generated markdown (default: src/content/docs/reference/api).
+    Where to write generated markdown (default: docs/reference/api).
 #>
 param(
     [string]$SourceDir = '..',
-    [string]$OutputDir = 'src/content/docs/reference/api'
+    [string]$OutputDir = 'docs/reference/api'
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -633,8 +854,8 @@ try {
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
     Write-Host "Scanning $SourceDir for API documentation..." -ForegroundColor Cyan
     # TypeScript/JavaScript: requires typedoc
-    $tsFiles = Get-ChildItem -Path $SourceDir -Recurse -Include *.ts,*.tsx,*.js,*.jsx -ErrorAction SilentlyContinue
-    if ($tsFiles) {
+    $tsFiles = @(Get-ChildItem -Path $SourceDir -Recurse -Include *.ts,*.tsx,*.js,*.jsx -ErrorAction SilentlyContinue)
+    if (@($tsFiles).Count -gt 0) {
         if (-not (Get-Command typedoc -ErrorAction SilentlyContinue)) {
             Write-Host 'typedoc not found; install: npm install -g typedoc typedoc-plugin-markdown' -ForegroundColor Yellow
         } else {
@@ -643,8 +864,8 @@ try {
         }
     }
     # Python: requires pydoc-markdown
-    $pyFiles = Get-ChildItem -Path $SourceDir -Recurse -Include *.py -ErrorAction SilentlyContinue
-    if ($pyFiles) {
+    $pyFiles = @(Get-ChildItem -Path $SourceDir -Recurse -Include *.py -ErrorAction SilentlyContinue)
+    if (@($pyFiles).Count -gt 0) {
         if (-not (Get-Command pydoc-markdown -ErrorAction SilentlyContinue)) {
             Write-Host 'pydoc-markdown not found; install: pip install pydoc-markdown' -ForegroundColor Yellow
         } else {
@@ -660,39 +881,30 @@ finally { Pop-Location }
         Write-ScaffoldInfo 'Created generate_api_docs.ps1 helper script.'
     }
 
-    # Versioning helper script
+    # Versioning helper script for Docusaurus
     $versionScript = Join-Path $docsDir 'version_docs.ps1'
     if (-not (Test-Path $versionScript)) {
         $versionContent = @'
 <#
 .SYNOPSIS
-    Create versioned copy of docs for a release tag.
+    Create versioned docs using Docusaurus versioning.
 .PARAMETER Version
-    Version tag (e.g., v1.0.0).
-.PARAMETER VersionedDir
-    Base directory for versioned docs (default: src/content/docs/versions).
+    Version tag (e.g., 1.0.0).
 #>
 param(
     [Parameter(Mandatory)]
-    [string]$Version,
-    [string]$VersionedDir = 'src/content/docs/versions'
+    [string]$Version
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Push-Location $PSScriptRoot
 try {
-    $versionPath = Join-Path $VersionedDir $Version
-    if (Test-Path $versionPath) { Write-Host "Version $Version already exists." -ForegroundColor Yellow; exit 0 }
-    New-Item -ItemType Directory -Path $versionPath -Force | Out-Null
+    $versionedDocsDir = Join-Path $PSScriptRoot "versioned_docs/version-$Version"
+    if (Test-Path $versionedDocsDir) { Write-Host "Version $Version already exists." -ForegroundColor Yellow; exit 0 }
     Write-Host "Creating versioned docs for $Version..." -ForegroundColor Cyan
-    # Copy current docs to versioned folder
-    Copy-Item -Path 'src/content/docs/tutorials' -Destination (Join-Path $versionPath 'tutorials') -Recurse -Force
-    Copy-Item -Path 'src/content/docs/guides' -Destination (Join-Path $versionPath 'guides') -Recurse -Force
-    Copy-Item -Path 'src/content/docs/reference' -Destination (Join-Path $versionPath 'reference') -Recurse -Force
-    Copy-Item -Path 'src/content/docs/explanation' -Destination (Join-Path $versionPath 'explanation') -Recurse -Force
-    # Update astro.config.mjs to add version to sidebar (manual step recommended)
-    Write-Host "Versioned docs created at $versionPath" -ForegroundColor Green
-    Write-Host "Update astro.config.mjs sidebar to include version entry manually." -ForegroundColor Yellow
+    # Use Docusaurus CLI to create version
+    & npm run docusaurus docs:version $Version
+    Write-Host "Versioned docs created for $Version" -ForegroundColor Green
 }
 finally { Pop-Location }
 '@
@@ -700,13 +912,13 @@ finally { Pop-Location }
         Write-ScaffoldInfo 'Created version_docs.ps1 helper script.'
     }
 
-    # Docs helper scripts (setup & start) - always ensure they exist
+    # Docs helper scripts (setup & start) - Docusaurus version
     $docsSetupScript = Join-Path $docsDir 'setup_docs.ps1'
     $docsStartScript = Join-Path $docsDir 'start_docs.ps1'
     $setupContent = @'
 <#
 .SYNOPSIS
-    Install Astro/Node dependencies for the docs site.
+    Install Docusaurus/Node dependencies for the docs site.
     Safe for Windows / cross-platform (no shebang to avoid /usr/bin/env invocation issues).
 #>
 Set-StrictMode -Version Latest
@@ -722,7 +934,7 @@ try {
     exit 1
   }
   if (-not (Test-Path 'node_modules')) {
-    Write-Host 'Installing Astro docs dependencies...' -ForegroundColor Cyan
+    Write-Host 'Installing Docusaurus docs dependencies...' -ForegroundColor Cyan
     & npm install
   }
   else {
@@ -734,18 +946,19 @@ finally { Pop-Location }
     $startContent = @'
 <#
 .SYNOPSIS
-    Start Astro docs dev server with host/port & auto system theme.
+    Start Docusaurus docs dev server with host/port.
 .PARAMETER Port
-    Port to bind (default 4321).
+    Port to bind (default 3000).
 .PARAMETER Expose
     Bind to 0.0.0.0 instead of localhost.
 .PARAMETER NoBrowser
     Skip auto-opening browser.
 #>
-param([
-  int]$Port = 4321,
+param(
+  [int]$Port = 3000,
   [switch]$Expose,
-  [switch]$NoBrowser)
+  [switch]$NoBrowser
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $uname=''; try { $uname=(uname) 2>$null } catch {}
@@ -758,37 +971,22 @@ try {
   if (-not (Test-Path (Join-Path $PSScriptRoot 'package.json'))) { Write-Host 'Docs site not initialized. Run bootstrap with docs feature.' -ForegroundColor Yellow; exit 1 }
   if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { Write-Host 'npm CLI not found. Install Node.js.' -ForegroundColor Red; exit 1 }
   if (-not (Test-Path (Join-Path $PSScriptRoot 'node_modules'))) { Write-Host 'node_modules missing; invoking setup_docs.ps1' -ForegroundColor Yellow; & (Join-Path $PSScriptRoot 'setup_docs.ps1') }
-  $astroExe = if ($IsWindowsPlatform) { Join-Path $PSScriptRoot 'node_modules\.@astrojs__cli\dist\astro.exe' } else { Join-Path $PSScriptRoot 'node_modules/.bin/astro' }
-  if (-not (Test-Path $astroExe)) { $astroExe = if ($IsWindowsPlatform) { Join-Path $PSScriptRoot 'node_modules\.bin\astro.cmd' } else { Join-Path $PSScriptRoot 'node_modules/.bin/astro' } }
   $Url = "http://${HostBind}:${Port}/"
-  Write-Host "Starting Astro docs dev server on ${HostBind}:${Port} (blocking)..." -ForegroundColor Cyan
+  Write-Host "Starting Docusaurus docs dev server on ${HostBind}:${Port} (blocking)..." -ForegroundColor Cyan
   if (-not $NoBrowser) {
     Start-Job -ScriptBlock { param($H,$P)
       for ($i=0;$i -lt 30;$i++) { try { $r=Invoke-WebRequest -Uri "http://${H}:${P}/" -UseBasicParsing -ErrorAction SilentlyContinue; if ($r.StatusCode -eq 200) { try { Start-Process "http://${H}:${P}/" } catch {}; break } } catch {} ; Start-Sleep 1 }
     } -ArgumentList $HostBind,$Port | Out-Null
   }
-  if (Test-Path $astroExe) { & $astroExe dev --port $Port --host $HostBind }
-  else { $npmExe=(Get-Command npm).Source; & $npmExe 'run' 'dev' '--' '--port' $Port '--host' $HostBind }
+  $npmExe = (Get-Command npm).Source
+  & $npmExe start -- --port $Port --host $HostBind
   Write-Host 'Docs dev process exited.' -ForegroundColor Yellow
 }
 finally { Pop-Location }
 '@
-    $existingSetupNeedsUpdate = (Test-Path $docsSetupScript) -and (Select-String -Path $docsSetupScript -Pattern '/usr/bin/env pwsh' -Quiet)
-    if ($existingSetupNeedsUpdate) {
-        Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8
-        Write-ScaffoldInfo 'Updated existing setup_docs.ps1 (removed shebang, added checks).'
-    }
-    elseif (-not (Test-Path $docsSetupScript)) {
-        Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8
-    }
-    $needsUpdate = (Test-Path $docsStartScript) -and ( (Select-String -Path $docsStartScript -Pattern '\$IsWindows=' -Quiet) -or (Select-String -Path $docsStartScript -Pattern '/usr/bin/env pwsh' -Quiet) )
-    if ($needsUpdate) {
-        Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
-        Write-ScaffoldInfo 'Updated existing start_docs.ps1 (removed shebang, added checks).'
-    }
-    elseif (-not (Test-Path $docsStartScript)) {
-        Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
-    }
+    # Always update/create the scripts for Docusaurus
+    Set-Content -Path $docsSetupScript -Value $setupContent -Encoding UTF8
+    Set-Content -Path $docsStartScript -Value $startContent -Encoding UTF8
     Write-ScaffoldInfo 'Docs helper scripts ensured (setup_docs.ps1, start_docs.ps1).'
 }
 else { Write-ScaffoldInfo 'Skipping documentation site feature.' }

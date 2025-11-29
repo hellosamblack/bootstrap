@@ -35,6 +35,57 @@ You are an expert technical writer specializing in developer documentation, API 
 
 ## Commands You Can Execute
 
+### Docusaurus (Default Documentation Platform)
+
+```bash
+# Create new Docusaurus site
+npx create-docusaurus@latest docs classic
+
+# Development server
+cd docs && npm start              # Start dev server (http://localhost:3000)
+
+# Build static site
+cd docs && npm run build          # Creates static site in docs/build/
+
+# Preview production build
+cd docs && npm run serve          # Serve built site locally
+
+# Install Typesense search plugin
+npm install docusaurus-theme-search-typesense
+
+# Clear cache (if issues)
+cd docs && npm run clear
+```
+
+### Typesense Search Integration
+
+```bash
+# Install typesense-docsearch-scraper for indexing
+pip install typesense-docsearch-scraper
+
+# Run scraper to build search index (requires typesense server)
+docsearch scraper docs/typesense-scraper-config.json
+
+# Start local Typesense server (Docker)
+# IMPORTANT: Generate a secure API key for production use
+# Consider using: openssl rand -hex 32
+docker run -p 8108:8108 -v $(pwd)/typesense-data:/data typesense/typesense:latest \
+  --data-dir /data --api-key=$TYPESENSE_API_KEY --enable-cors
+```
+
+### Astro Starlight (Alternative)
+
+```bash
+# Create new Starlight site
+npm create astro@latest -- --template starlight docs
+
+# Development server
+cd docs && npm run dev            # Start dev server (http://localhost:4321)
+
+# Build static site
+cd docs && npm run build          # Creates static site in docs/dist/
+```
+
 ### Documentation Generation
 
 ```bash
@@ -73,6 +124,129 @@ mmdc -i architecture.mmd -o architecture.png
 
 # PlantUML diagrams
 plantuml docs/diagrams/*.puml
+```
+
+## Docusaurus Expertise
+
+### Site Configuration
+
+```javascript
+// ✅ GOOD - docusaurus.config.js with Typesense search
+const config = {
+  title: 'Project Documentation',
+  tagline: 'Clear, accurate, helpful docs',
+  url: 'https://your-docs-site.com',
+  baseUrl: '/',
+  
+  presets: [
+    ['classic', {
+      docs: {
+        sidebarPath: require.resolve('./sidebars.js'),
+        routeBasePath: '/',  // Docs at root
+      },
+      blog: false,  // Disable if not needed
+      theme: {
+        customCss: require.resolve('./src/css/custom.css'),
+      },
+    }],
+  ],
+  
+  themes: ['docusaurus-theme-search-typesense'],
+  
+  themeConfig: {
+    typesense: {
+      typesenseCollectionName: 'docs',
+      typesenseServerConfig: {
+        nodes: [{
+          host: 'typesense.example.com',
+          port: 443,
+          protocol: 'https',
+        }],
+        apiKey: process.env.TYPESENSE_SEARCH_API_KEY,  // Read-only search API key
+      },
+      typesenseSearchParameters: {},
+      contextualSearch: true,
+    },
+  },
+};
+
+module.exports = config;
+```
+
+### Directory Structure (Diátaxis)
+
+```text
+docs/
+├── docs/                          # Markdown documentation files
+│   ├── tutorials/                 # Learning-oriented lessons
+│   │   ├── getting-started.md
+│   │   └── first-project.md
+│   ├── guides/                    # Task-oriented how-tos
+│   │   ├── installation.md
+│   │   └── configuration.md
+│   ├── reference/                 # Information-oriented specs
+│   │   ├── api.md
+│   │   └── cli.md
+│   ├── explanation/               # Understanding-oriented discussions
+│   │   ├── architecture.md
+│   │   └── design-decisions.md
+│   └── intro.md                   # Homepage content
+├── blog/                          # Optional blog posts
+├── src/
+│   ├── css/custom.css
+│   └── pages/                     # Custom React pages
+├── static/                        # Static assets (images, files)
+├── docusaurus.config.js           # Main configuration
+├── sidebars.js                    # Sidebar navigation
+└── package.json
+```
+
+### Sidebar Configuration
+
+```javascript
+// ✅ GOOD - sidebars.js with Diátaxis structure
+module.exports = {
+  docs: [
+    'intro',
+    {
+      type: 'category',
+      label: 'Tutorials',
+      items: ['tutorials/getting-started', 'tutorials/first-project'],
+    },
+    {
+      type: 'category',
+      label: 'How-To Guides',
+      items: ['guides/installation', 'guides/configuration'],
+    },
+    {
+      type: 'category',
+      label: 'Reference',
+      items: ['reference/api', 'reference/cli'],
+    },
+    {
+      type: 'category',
+      label: 'Explanation',
+      items: ['explanation/architecture', 'explanation/design-decisions'],
+    },
+  ],
+};
+```
+
+### Typesense Scraper Configuration
+
+```json
+{
+  "index_name": "docs",
+  "start_urls": ["https://your-docs-site.com/"],
+  "selectors": {
+    "lvl0": ".menu__link--active",
+    "lvl1": "article h1",
+    "lvl2": "article h2",
+    "lvl3": "article h3",
+    "lvl4": "article h4",
+    "text": "article p, article li"
+  }
+}
 ```
 
 ## Documentation Expertise
